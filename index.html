@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verified Models</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyAIHevrpglvhHK3IsxpnkHlWpxnuf5o1So",
+  authDomain: "galeria-verifiedmodels.firebaseapp.com",
+  projectId: "galeria-verifiedmodels",
+  storageBucket: "galeria-verifiedmodels.firebasestorage.app",
+  messagingSenderId: "684551560793",
+  appId: "1:684551560793:web:3730a07d8d6ec737e3db48"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+window.db=db; window.collection=collection; window.onSnapshot=onSnapshot;
+window.doc=doc; window.updateDoc=updateDoc; window.increment=increment;
+</script>
+<style>
+body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:center}
+.topbar{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(0,0,0,0.95);padding:8px 12px;z-index:10;border-bottom:1px solid #222}
+.top-left a{color:#ff69b4;text-decoration:none;font-size:11px;border:1px solid #ff69b4;padding:5px 10px;border-radius:20px}
+.logo-mini{width:42px;height:42px;border-radius:50%;border:2px solid #ff69b4;box-shadow:0 0 10px #ff69b4;object-fit:cover}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
+.mini{position:relative;border-radius:18px;overflow:hidden;border:2px solid #222;background:#111;cursor:pointer}
+.mini img{width:100%;height:220px;object-fit:cover;display:block}
+.mini-nombre{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.95));padding:22px 6px 8px}
+.mini-nombre b{color:#fff;font-size:13px;display:block;text-shadow:0 0 6px #ff69b4}
+.mini-nombre span{color:#ffb6da;font-size:10px;font-weight:bold}
+#modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);z-index:100;display:none;overflow-y:auto;padding:12px}
+.modal-box{max-width:400px;margin:15px auto;background:linear-gradient(145deg,#111,#222);border:2px solid #ff69b4;border-radius:22px;overflow:hidden;box-shadow:0 0 30px rgba(255,105,180,.6);animation:pop 0.3s;text-align:center}
+@keyframes pop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
+.modal-foto{width:100%;height:420px;object-fit:cover}
+.modal-info{padding:14px;box-sizing:border-box}
+.nombre{color:#ff8ec3;font-size:22px;font-weight:bold;margin:6px 0;text-shadow:0 0 10px #ff69b4}
+.info{margin:6px 0;color:#ffb6da;font-size:13px;font-weight:bold}
+.servs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0}
+.tag{border:1px solid #ff69b4;color:#ff8ec3;padding:5px 10px;border-radius:20px;font-size:11px;background:#000}
+.desc{color:#ddd;font-size:13px;margin:10px 0;font-style:italic}
+.barra{height:7px;background:#222;border-radius:10px;margin:12px 0;overflow:hidden;display:flex}
+.barra-malo{background:#ff2d2d;transition:0.5s}
+.barra-bueno{background:#00ff88;transition:0.5s}
+.btns{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;padding:14px;border:none;border-radius:30px;font-weight:bold;cursor:pointer;font-size:14px;transition:0.3s;box-sizing:border-box}
+.btn-malo{background:#222;color:#ff2d2d;border:2px solid #ff2d2d}
+.btn-bueno{background:#222;color:#00ff88;border:2px solid #00ff88}
+.btn-canal{background:linear-gradient(90deg,#ffb6da,#ff69b4);color:#000;width:100%;max-width:100%;margin-top:10px;padding:16px 10px;border:none;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #ff69b4;display:block;text-decoration:none;box-sizing:border-box;word-wrap:break-word;overflow:hidden;text-align:center}
+.close{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);color:#fff;border:1px solid #fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="top-left"><a href="admin.html">🔐 Panel</a></div>
+  <div style="color:#ff8ec3;font-weight:bold;font-size:13px">👑 ꪜⲉꮢꭵ𑣂ꭵⲉꭰ﹡Ꮇ𖹭ꭰⲉꮮꮪ 👑</div>
+  <img src="Logo.webp" class="logo-mini" onerror="this.src='logo.webp'">
+</div>
+<h2 style="color:#ff8ec3;margin-top:13px">💖✨𝙉𝙐𝙀𝙎𝙏𝙍𝘼𝙎 𝙈𝙊𝘿𝙀𝙇𝙊𝙎✨💖</h2>
+<div id="galeria" class="grid"></div>
+<div id="modal" onclick="if(event.target==this) cerrar()">
+  <div class="modal-box">
+    <div style="position:relative">
+      <img id="mFoto" class="modal-foto">
+      <button class="close" onclick="cerrar()">✕</button>
+    </div>
+    <div class="modal-info">
+      <div id="mNombre" class="nombre"></div>
+      <div id="mUser" style="color:silver;font-size:11px"></div>
+      <div id="mInfo" class="info"></div>
+      <div id="mServs" class="servs"></div>
+      <div id="mDesc" class="desc"></div>
+      <h3 style="color:#ff8ec3;font-size:14px;margin:10px 0 5px">💞𝘾𝘼𝙇𝙄𝙁𝙄𝘾𝘼 𝙎𝙐 𝙎𝙀𝙍𝙑𝙄𝘾𝙄𝙊💞</h3>
+      <div style="display:flex;justify-content:space-between;color:silver;font-size:10px">
+        <span id="mMaloTxt">👎🏻 0%</span>
+        <span id="mBuenoTxt">👍🏻 0%</span>
+      </div>
+      <div class="barra">
+        <div id="barraMalo" class="barra-malo" style="width:50%"></div>
+        <div id="barraBueno" class="barra-bueno" style="width:50%"></div>
+      </div>
+      <div class="btns">
+        <button id="btnMalo" class="btn btn-malo" onclick="votar('MALO')">👎🏻 MALO</button>
+        <button id="btnBueno" class="btn btn-bueno" onclick="votar('BUENO')">👍🏻 BUENO</button>
+      </div>
+      <a id="mCanal" class="btn-canal" target="_blank">💖 𝐂𝐀𝐍𝐀𝐋 𝐅𝐑𝐄𝐄 💖</a>
+    </div>
+  </div>
+</div>
+<script type="module">
+const BOT_TOKEN = "8875808872:AAHQMf_P7PszXcwUhLnNxSb_rntqFCSDRZo";
+const ID_CANAL = "-1004459106029";
+let modeloActual = null;
+let modeloIndex = 0;
+let modelosDB = [];
+function render(){
+  if(modelosDB.length===0){ document.getElementById('galeria').innerHTML = '<p style="color:silver;grid-column:span 2;margin-top:40px">Aún no hay modelos<br>Agrega una desde el Panel Jefa 🩷</p>'; return; }
+  let html="";
+  modelosDB.forEach((m,i)=>{
+    let malo = m.votosMalo || 0;
+    let bueno = m.votosBueno || 0;
+    let total = malo + bueno;
+    let pBueno = total>0? Math.round(bueno/total*100) : 50;
+    let txt = total>0? `👍🏻 ${pBueno}% • ${total} votos` : `${m.nacionalidad} • ${m.edad} Años`;
+    html+=`<div class="mini" onclick="abrir(${i})">
+      <img src="${m.foto}" onerror="this.src='Logo.webp'">
+      <div class="mini-nombre"><b>${m.perfil}</b><span>${txt}</span></div>
+    </div>`;
+  });
+  document.getElementById('galeria').innerHTML=html;
+}
+window.abrir = (i)=>{
+  let m = modelosDB[i];
+  modeloActual = m; modeloIndex = i;
+  document.getElementById('mFoto').src = m.foto;
+  document.getElementById('mNombre').innerText = m.perfil;
+  document.getElementById('mUser').innerText = '@'+m.username;
+  document.getElementById('mInfo').innerText = `${m.nacionalidad} • ${m.edad} años`;
+  let servs = m.servicios && m.servicios.length>0? m.servicios : [];
+  if(servs.length===0){
+    document.getElementById('mServs').innerHTML = `<span style="color:#555;font-size:11px">Sin servicios registrados</span>`;
+  } else {
+    document.getElementById('mServs').innerHTML = servs.map(s=>`<span class="tag">${s}</span>`).join('');
+  }
+  document.getElementById('mDesc').innerText = `"${m.descripcion}"`;
+  document.getElementById('mCanal').href = m.canal_free;
+  actualizar();
+  document.getElementById('modal').style.display='block';
+  document.body.style.overflow='hidden';
+}
+window.cerrar = ()=>{ document.getElementById('modal').style.display='none'; document.body.style.overflow='auto'; }
+function actualizar(){
+  if(!modeloActual) return;
+  let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
+  modeloActual = mActualizada;
+  let malo = mActualizada.votosMalo || 0;
+  let bueno = mActualizada.votosBueno || 0;
+  let total = malo + bueno;
+  let pMalo = total>0? Math.round(malo/total*100) : 0;
+  let pBueno = total>0? Math.round(bueno/total*100) : 0;
+  if(total==0){ pMalo=0; pBueno=0; }
+  document.getElementById('mMaloTxt').innerText = `👎🏻 ${pMalo}% (${malo})`;
+  document.getElementById('mBuenoTxt').innerText = `👍🏻 ${pBueno}% (${bueno})`;
+  document.getElementById('barraMalo').style.width = pMalo+'%';
+  document.getElementById('barraBueno').style.width = pBueno+'%';
+  document.getElementById('btnMalo').innerHTML = `👎🏻 MALO ${pMalo}%`;
+  document.getElementById('btnBueno').innerHTML = `👍🏻 BUENO ${pBueno}%`;
+}
+window.votar = async (tipo)=>{
+  if(!modeloActual) return;
+  const ref = doc(db,"modelos",modeloActual.id);
+  try{
+    if(tipo==='MALO'){
+      await updateDoc(ref,{ votosMalo: increment(1) });
+    } else {
+      await updateDoc(ref,{ votosBueno: increment(1) });
+    }
+    let user = window.Telegram.WebApp.initDataUnsafe?.user?.username || 'cliente';
+    let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
+    let total = (mActualizada.votosMalo||0)+(mActualizada.votosBueno||0)+1;
+    let msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} CALIFICACIÓN ${tipo}\nModelo: ${modeloActual.perfil} (@${modeloActual.username})\nTotal: ${total} votos\nDe: @${user}`;
+    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:ID_CANAL,text:msg})});
+  }catch(e){
+    alert("Error votando: "+e.message);
+  }
+}
+const unsub = onSnapshot(collection(db,"modelos"), (snap)=>{
+  modelosDB = [];
+  snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
+  render();
+  if(document.getElementById('modal').style.display==='block'){
+    actualizar();
+  }
+});
+</script>
+</body>
+</html>
