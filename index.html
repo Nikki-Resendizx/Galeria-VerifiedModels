@@ -157,11 +157,12 @@ window.votar = async (tipo)=>{
     } else {
       await updateDoc(ref,{ votosBueno: increment(1) });
     }
-    let user = window.Telegram.WebApp.initDataUnsafe?.user?.username || 'cliente';
-    let id = user ? user.id || 'cliente';
+    let tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+    let tgId = tgUser?.id || 'desconocido';
+    let tgUsername = tgUser?.username ? `@${tgUser.username}` : `(sin @) ID: ${tgId}`;
     let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
     let total = (mActualizada.votosMalo||0)+(mActualizada.votosBueno||0)+1;
-    let msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} CALIFICACIÓN ${tipo}\nModelo: ${modeloActual.perfil} (@${modeloActual.username})\nTotal: ${total} votos\nDe: @${user}`;
+    let msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} CALIFICACIÓN ${tipo}\nModelo: ${modeloActual.perfil} (@${modeloActual.username})\nTotal: ${total} votos\nDe: ${tgUsername}\nID Telegram: ${tgId}`;
     fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:ID_CANAL,text:msg})});
   }catch(e){
     alert("Error votando: "+e.message);
