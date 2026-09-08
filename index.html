@@ -158,6 +158,7 @@ window.votar = async (tipo)=>{
       await updateDoc(ref,{ votosBueno: increment(1) });
     }
     let user = window.Telegram.WebApp.initDataUnsafe?.user?.username || 'cliente';
+    let id = user ? user.id : "";
     let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
     let total = (mActualizada.votosMalo||0)+(mActualizada.votosBueno||0)+1;
     let msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} CALIFICACIÓN ${tipo}\nModelo: ${modeloActual.perfil} (@${modeloActual.username})\nTotal: ${total} votos\nDe: @${user}`;
