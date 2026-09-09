@@ -2,11 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verified Models</title>
+<title>Verified Models V3 ULTRA</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, increment, addDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAIHevrpglvhHK3IsxpnkHlWpxnuf5o1So",
   authDomain: "galeria-verifiedmodels.firebaseapp.com",
@@ -19,162 +19,267 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window.db=db; window.collection=collection; window.onSnapshot=onSnapshot;
 window.doc=doc; window.updateDoc=updateDoc; window.increment=increment;
+window.addDoc=addDoc; window.query=query; window.orderBy=orderBy; window.serverTimestamp=serverTimestamp;
 </script>
 <style>
 body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:center}
-.topbar{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(0,0,0,0.95);padding:8px 12px;z-index:10;border-bottom:1px solid #222}
+.topbar{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(0,0,0,0.98);padding:8px 12px;z-index:20;border-bottom:1px solid #222}
 .top-left a{color:#ff69b4;text-decoration:none;font-size:11px;border:1px solid #ff69b4;padding:5px 10px;border-radius:20px}
 .logo-mini{width:42px;height:42px;border-radius:50%;border:2px solid #ff69b4;box-shadow:0 0 10px #ff69b4;object-fit:cover}
+.search-wrap{padding:10px 12px;display:flex;gap:8px;position:sticky;top:58px;background:#000;z-index:10}
+.search-wrap input{flex:1;background:#111;border:1px solid #333;color:#fff;padding:11px 14px;border-radius:25px;outline:none}
+.search-wrap select{background:#111;border:1px solid #333;color:#ff8ec3;padding:10px;border-radius:25px;font-size:12px}
+.chips{display:flex;gap:6px;padding:0 12px 8px;overflow-x:auto;white-space:nowrap;scrollbar-width:none}
+.chip{border:1px solid #ff69b4;color:#ff8ec3;padding:6px 12px;border-radius:20px;font-size:11px;background:#000;cursor:pointer;flex-shrink:0}
+.chip.active{background:#ff69b4;color:#000;font-weight:bold}
+.top3{padding:10px 12px;text-align:left}
+.top3-title{color:#ff8ec3;font-weight:bold;font-size:13px;margin-bottom:6px}
+.top3-row{display:flex;gap:8px;overflow-x:auto}
+.top3-card{min-width:110px;background:#111;border:1px solid #ff69b4;border-radius:16px;overflow:hidden;cursor:pointer;flex-shrink:0}
+.top3-card img{width:110px;height:110px;object-fit:cover;display:block}
+.top3-card b{font-size:11px;display:block;padding:4px;color:#fff}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px}
 .mini{position:relative;border-radius:18px;overflow:hidden;border:2px solid #222;background:#111;cursor:pointer}
+.mini.verified{border-color:#00ff88;box-shadow:0 0 12px rgba(0,255,136,.4)}
 .mini img{width:100%;height:220px;object-fit:cover;display:block}
+.badge-verified{position:absolute;top:6px;left:6px;background:#00ff88;color:#000;font-size:8px;font-weight:bold;padding:3px 7px;border-radius:20px}
 .mini-nombre{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,0.95));padding:22px 6px 8px}
 .mini-nombre b{color:#fff;font-size:13px;display:block;text-shadow:0 0 6px #ff69b4}
 .mini-nombre span{color:#ffb6da;font-size:10px;font-weight:bold}
-#modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);backdrop-filter:blur(8px);z-index:100;display:none;overflow-y:auto;padding:12px}
-.modal-box{max-width:400px;margin:15px auto;background:linear-gradient(145deg,#111,#222);border:2px solid #ff69b4;border-radius:22px;overflow:hidden;box-shadow:0 0 30px rgba(255,105,180,.6);animation:pop 0.3s;text-align:center}
+#modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.92);backdrop-filter:blur(8px);z-index:100;display:none;overflow-y:auto;padding:12px}
+.modal-box{max-width:420px;margin:10px auto;background:linear-gradient(145deg,#111,#222);border:2px solid #ff69b4;border-radius:22px;overflow:hidden;box-shadow:0 0 30px rgba(255,105,180,.6);animation:pop 0.3s;text-align:center}
 @keyframes pop{0%{transform:scale(0.85);opacity:0}100%{transform:scale(1);opacity:1}}
-.modal-foto{width:100%;height:420px;object-fit:cover}
-.modal-info{padding:14px;box-sizing:border-box}
-.nombre{color:#ff8ec3;font-size:22px;font-weight:bold;margin:6px 0;text-shadow:0 0 10px #ff69b4}
+.carousel{position:relative;width:100%;height:420px;overflow:hidden;background:#000}
+.carousel-track{display:flex;transition:transform 0.3s ease;height:100%}
+.carousel-track img{width:100%;height:420px;object-fit:cover;flex-shrink:0}
+.dots{position:absolute;bottom:10px;left:0;right:0;display:flex;justify-content:center;gap:6px}
+.dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,0.4)}
+.dot.active{background:#ff69b4;box-shadow:0 0 6px #ff69b4}
+.nombre{color:#ff8ec3;font-size:22px;font-weight:bold;margin:8px 0 2px;text-shadow:0 0 10px #ff69b4}
 .info{margin:6px 0;color:#ffb6da;font-size:13px;font-weight:bold}
 .servs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:10px 0}
 .tag{border:1px solid #ff69b4;color:#ff8ec3;padding:5px 10px;border-radius:20px;font-size:11px;background:#000}
 .desc{color:#ddd;font-size:13px;margin:10px 0;font-style:italic}
 .barra{height:7px;background:#222;border-radius:10px;margin:12px 0;overflow:hidden;display:flex}
-.barra-malo{background:#ff2d2d;transition:0.5s}
-.barra-bueno{background:#00ff88;transition:0.5s}
+.barra-malo{background:#ff2d2d}
+.barra-bueno{background:#00ff88}
 .btns{display:flex;gap:8px;margin-top:12px}
-.btn{flex:1;padding:14px;border:none;border-radius:30px;font-weight:bold;cursor:pointer;font-size:14px;transition:0.3s;box-sizing:border-box}
+.btn{flex:1;padding:14px;border:none;border-radius:30px;font-weight:bold;cursor:pointer;font-size:14px}
 .btn-malo{background:#222;color:#ff2d2d;border:2px solid #ff2d2d}
 .btn-bueno{background:#222;color:#00ff88;border:2px solid #00ff88}
-.btn-canal{background:linear-gradient(90deg,#ffb6da,#ff69b4);color:#000;width:100%;max-width:100%;margin-top:10px;padding:16px 10px;border:none;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #ff69b4;display:block;text-decoration:none;box-sizing:border-box;word-wrap:break-word;overflow:hidden;text-align:center}
-.close{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);color:#fff;border:1px solid #fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer}
+.btn-canal{background:linear-gradient(90deg,#ffb6da,#ff69b4);color:#000;width:100%;margin-top:10px;padding:16px 10px;border:none;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #ff69b4;display:block;text-decoration:none;box-sizing:border-box;text-align:center}
+.btn-contact{background:#000;color:#fff;width:100%;margin-top:8px;padding:14px 10px;border:2px solid #2AABEE;border-radius:30px;font-weight:bold;display:flex;justify-content:center;align-items:center;gap:8px;text-decoration:none;box-sizing:border-box}
+.btn-sec{flex:1;background:#111;border:1px solid #333;color:#fff;padding:10px;border-radius:20px;font-size:12px;cursor:pointer}
+.coment-box{margin-top:14px;text-align:left;background:#0a0a0a;border-radius:16px;padding:10px;border:1px solid #222}
+.coment{border-bottom:1px solid #222;padding:6px 0;font-size:12px}
+.coment b{color:#ff8ec3;font-size:11px}
+.coment span{color:#ddd;display:block;margin-top:2px}
+.close{position:absolute;top:10px;right:10px;background:rgba(0,0,0,0.7);color:#fff;border:1px solid #fff;width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;z-index:5}
 </style>
 </head>
 <body>
 <div class="topbar">
   <div class="top-left"><a href="admin.html">🔐 Panel</a></div>
-  <div style="color:#ff8ec3;font-weight:bold;font-size:13px">👑 ꪜⲉꮢꭵ𑣂ꭵⲉꭰ﹡Ꮇ𖹭ꭰⲉꮮꮪ 👑</div>
+  <div style="color:#ff8ec3;font-weight:bold;font-size:12px">👑 VERIFIED MODELS V3 👑</div>
   <img src="Logo.webp" class="logo-mini" onerror="this.src='logo.webp'">
 </div>
-<h2 style="color:#ff8ec3;margin-top:13px">💖✨𝙉𝙐𝙀𝙎𝙏𝙍𝘼𝙎 𝙈𝙊𝘿𝙀𝙇𝙊𝙎✨💖</h2>
+<div class="search-wrap">
+  <input id="buscador" placeholder="🔍 Nombre, @, país..." oninput="filtrar()">
+  <select id="orden" onchange="filtrar()">
+    <option value="todas">📋 Todas</option>
+    <option value="top">🔥 Más votadas</option>
+    <option value="nuevo">🆕 Nuevas</option>
+    <option value="fav">❤️ Favoritas</option>
+  </select>
+</div>
+<div id="chips" class="chips"></div>
+<div id="top3wrap" class="top3">
+  <div class="top3-title">📊 TOP 3 DE LA SEMANA 🔥</div>
+  <div id="top3" class="top3-row"></div>
+</div>
+<h2 id="contador" style="color:#ff8ec3;margin:5px 0 0;font-size:13px">💖 Cargando...</h2>
 <div id="galeria" class="grid"></div>
 <div id="modal" onclick="if(event.target==this) cerrar()">
   <div class="modal-box">
     <div style="position:relative">
-      <img id="mFoto" class="modal-foto">
+      <div class="carousel" id="carousel"><div class="carousel-track" id="track"></div><div class="dots" id="dots"></div></div>
       <button class="close" onclick="cerrar()">✕</button>
+      <div id="mVerified" style="position:absolute;top:10px;left:10px;background:#00ff88;color:#000;font-size:10px;font-weight:bold;padding:4px 10px;border-radius:20px;display:none;z-index:2">✅ VERIFIED 80%+</div>
     </div>
-    <div class="modal-info">
+    <div style="padding:14px">
       <div id="mNombre" class="nombre"></div>
       <div id="mUser" style="color:silver;font-size:11px"></div>
       <div id="mInfo" class="info"></div>
       <div id="mServs" class="servs"></div>
       <div id="mDesc" class="desc"></div>
-      <h3 style="color:#ff8ec3;font-size:14px;margin:10px 0 5px">💞𝘾𝘼𝙇𝙄𝙁𝙄𝘾𝘼 𝙎𝙐 𝙎𝙀𝙍𝙑𝙄𝘾𝙄𝙊💞</h3>
-      <div style="display:flex;justify-content:space-between;color:silver;font-size:10px">
-        <span id="mMaloTxt">👎🏻 0%</span>
-        <span id="mBuenoTxt">👍🏻 0%</span>
-      </div>
-      <div class="barra">
-        <div id="barraMalo" class="barra-malo" style="width:50%"></div>
-        <div id="barraBueno" class="barra-bueno" style="width:50%"></div>
-      </div>
+      <h3 style="color:#ff8ec3;font-size:14px;margin:10px 0 5px">💞 CALIFICA SU SERVICIO 💞</h3>
+      <div style="display:flex;justify-content:space-between;color:silver;font-size:10px"><span id="mMaloTxt">👎🏻 0%</span><span id="mBuenoTxt">👍🏻 0%</span></div>
+      <div class="barra"><div id="barraMalo" class="barra-malo" style="width:0%"></div><div id="barraBueno" class="barra-bueno" style="width:0%"></div></div>
       <div class="btns">
         <button id="btnMalo" class="btn btn-malo" onclick="votar('MALO')">👎🏻 MALO</button>
         <button id="btnBueno" class="btn btn-bueno" onclick="votar('BUENO')">👍🏻 BUENO</button>
       </div>
       <a id="mCanal" class="btn-canal" target="_blank">💖 𝐂𝐀𝐍𝐀𝐋 𝐅𝐑𝐄𝐄 💖</a>
+      <a id="mContacto" class="btn-contact" target="_blank">✈️ 𝘾𝙊𝙉𝙏𝘼𝘾𝙏𝘼𝙇𝘼 𝘼𝙌𝙐𝙄 💬</a>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn-sec" onclick="compartir()">📤 Compartir Perfil</button>
+        <button class="btn-sec" onclick="fav()">❤️ Favorito</button>
+      </div>
+      <div class="coment-box">
+        <div style="font-weight:bold;color:#ff8ec3;font-size:13px;margin-bottom:6px">💬 Comentarios de clientes</div>
+        <div id="listaComent" style="max-height:160px;overflow-y:auto"></div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input id="inputComent" placeholder="Deja tu experiencia (anónimo)..." style="flex:1;background:#111;border:1px solid #333;color:#fff;padding:10px;border-radius:20px;font-size:12px">
+          <button onclick="enviarComent()" style="background:#ff69b4;color:#000;border:none;padding:10px 14px;border-radius:20px;font-weight:bold">Enviar</button>
+        </div>
+        <div style="font-size:9px;color:#666;margin-top:4px">* Anónimo para todos. Admins ven tu ID por seguridad.</div>
+      </div>
     </div>
   </div>
 </div>
 <script type="module">
-const BOT_TOKEN = "8875808872:AAHQMf_P7PszXcwUhLnNxSb_rntqFCSDRZo";
-const ID_CANAL = "-1004459106029";
-let modeloActual = null;
-let modeloIndex = 0;
-let modelosDB = [];
-function render(){
-  if(modelosDB.length===0){ document.getElementById('galeria').innerHTML = '<p style="color:silver;grid-column:span 2;margin-top:40px">Aún no hay modelos<br>Agrega una desde el Panel Jefa 🩷</p>'; return; }
-  let html="";
-  modelosDB.forEach((m,i)=>{
-    let malo = m.votosMalo || 0;
-    let bueno = m.votosBueno || 0;
-    let total = malo + bueno;
-    let pBueno = total>0? Math.round(bueno/total*100) : 50;
-    let txt = total>0? `👍🏻 ${pBueno}% • ${total} votos` : `${m.nacionalidad} • ${m.edad} Años`;
-    html+=`<div class="mini" onclick="abrir(${i})">
-      <img src="${m.foto}" onerror="this.src='Logo.webp'">
-      <div class="mini-nombre"><b>${m.perfil}</b><span>${txt}</span></div>
+let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
+function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,4); }
+function render(lista){
+  document.getElementById('contador').innerText=`💖 ${lista.length} modelos`;
+  const gal=document.getElementById('galeria');
+  if(!lista.length){ gal.innerHTML='<p style="color:silver;grid-column:span 2">Sin resultados 🩷</p>'; return; }
+  gal.innerHTML=lista.map(m=>{
+    let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno, pBueno=total?Math.round(bueno/total*100):0;
+    let ver= total>=5 && pBueno>=80;
+    return `<div class="mini ${ver?'verified':''}" onclick="abrir('${m.id}')">
+      ${ver?'<span class="badge-verified">✅ VERIFIED</span>':''}
+      <img src="${m.foto}" loading="lazy" onerror="this.src='Logo.webp'">
+      <div class="mini-nombre"><b>${m.perfil}</b><span>${total?`👍🏻 ${pBueno}% • ${total} votos`:`${m.nacionalidad} • ${m.edad}A`}</span></div>
     </div>`;
-  });
-  document.getElementById('galeria').innerHTML=html;
+  }).join('');
+  renderTop3();
 }
-window.abrir = (i)=>{
-  let m = modelosDB[i];
-  modeloActual = m; modeloIndex = i;
-  document.getElementById('mFoto').src = m.foto;
-  document.getElementById('mNombre').innerText = m.perfil;
-  document.getElementById('mUser').innerText = '@'+m.username;
-  document.getElementById('mInfo').innerText = `${m.nacionalidad} • ${m.edad} años`;
-  let servs = m.servicios && m.servicios.length>0? m.servicios : [];
-  if(servs.length===0){
-    document.getElementById('mServs').innerHTML = `<span style="color:#555;font-size:11px">Sin servicios registrados</span>`;
-  } else {
-    document.getElementById('mServs').innerHTML = servs.map(s=>`<span class="tag">${s}</span>`).join('');
-  }
-  document.getElementById('mDesc').innerText = `"${m.descripcion}"`;
-  document.getElementById('mCanal').href = m.canal_free;
+function renderTop3(){
+  let top=[...modelosDB].sort((a,b)=> (b.votosBueno||0) - (a.votosBueno||0)).slice(0,3);
+  document.getElementById('top3').innerHTML=top.map(m=>`<div class="top3-card" onclick="abrir('${m.id}')"><img src="${m.foto}"><b>🥇 ${m.perfil}</b><span style="font-size:9px;color:#00ff88">${m.votosBueno||0} 👍🏻</span></div>`).join('');
+}
+function buildChips(){
+  let all=new Set(); modelosDB.forEach(m=> (m.servicios||[]).forEach(s=>all.add(s)));
+  let html=`<span class="chip ${!filtroServicio?'active':''}" onclick="setChip(null)">Todas</span>`;
+  all.forEach(s=> html+=`<span class="chip ${filtroServicio===s?'active':''}" onclick="setChip('${s.replace(/'/g,'')}')">${s}</span>`);
+  document.getElementById('chips').innerHTML=html;
+}
+window.setChip=(s)=>{ filtroServicio=s; filtrar(); buildChips(); }
+window.filtrar=()=>{
+  let q=document.getElementById('buscador').value.toLowerCase();
+  let orden=document.getElementById('orden').value;
+  let favs=JSON.parse(localStorage.getItem('favs')||'[]');
+  let lista=[...modelosDB];
+  if(q) lista=lista.filter(m=> `${m.perfil} ${m.username} ${m.nacionalidad}`.toLowerCase().includes(q));
+  if(filtroServicio) lista=lista.filter(m=> (m.servicios||[]).includes(filtroServicio));
+  if(orden==='fav') lista=lista.filter(m=> favs.includes(m.id));
+  if(orden==='top') lista.sort((a,b)=> ((b.votosBueno||0)/((b.votosBueno||0)+(b.votosMalo||0)||1)) - ((a.votosBueno||0)/((a.votosBueno||0)+(a.votosMalo||0)||1)));
+  if(orden==='nuevo') lista.sort((a,b)=> (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  render(lista);
+}
+let comentariosUnsub=null;
+window.abrir=(id)=>{
+  let m=modelosDB.find(x=>x.id===id); if(!m) return; modeloActual=m; currentSlide=0;
+  let fotos=getFotos(m);
+  document.getElementById('track').innerHTML=fotos.map(f=>`<img src="${f}" onerror="this.src='Logo.webp'">`).join('');
+  document.getElementById('track').style.transform='translateX(0)';
+  document.getElementById('dots').innerHTML=fotos.map((_,i)=>`<div class="dot ${i===0?'active':''}"></div>`).join('');
+  let startX=0; const car=document.getElementById('carousel');
+  car.ontouchstart=e=> startX=e.touches[0].clientX;
+  car.ontouchend=e=>{ let dx=e.changedTouches[0].clientX-startX; if(dx<-50 && currentSlide<fotos.length-1) goSlide(currentSlide+1); if(dx>50 && currentSlide>0) goSlide(currentSlide-1); };
+  document.getElementById('mNombre').innerText=m.perfil;
+  document.getElementById('mUser').innerText='@'+m.username;
+  document.getElementById('mInfo').innerText=`${m.nacionalidad} • ${m.edad} años`;
+  document.getElementById('mServs').innerHTML=(m.servicios||[]).map(s=>`<span class="tag">${s}</span>`).join('') || '<span style="color:#555">Sin servicios</span>';
+  document.getElementById('mDesc').innerText=`"${m.descripcion||''}"`;
+  document.getElementById('mCanal').href=m.canal_free||'#';
+  document.getElementById('mContacto').href=m.username?`https://t.me/${m.username.replace('@','')}`:'#';
+  document.getElementById('mContacto').style.display=m.username?'flex':'none';
+  let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno, pBueno=total?Math.round(bueno/total*100):0;
+  document.getElementById('mVerified').style.display=(total>=5 && pBueno>=80)?'block':'none';
   actualizar();
+  cargarComentarios(m.id);
   document.getElementById('modal').style.display='block';
   document.body.style.overflow='hidden';
+  history.pushState(null,'',`?m=${m.id}`);
 }
-window.cerrar = ()=>{ document.getElementById('modal').style.display='none'; document.body.style.overflow='auto'; }
+function goSlide(n){
+  let track=document.getElementById('track');
+  currentSlide=n; track.style.transform=`translateX(-${n*100}%)`;
+  document.querySelectorAll('.dot').forEach((d,i)=> d.classList.toggle('active', i===n));
+}
+window.cerrar=()=>{ document.getElementById('modal').style.display='none'; document.body.style.overflow='auto'; history.pushState(null,'',' '); if(comentariosUnsub) comentariosUnsub(); }
 function actualizar(){
-  if(!modeloActual) return;
-  let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
-  modeloActual = mActualizada;
-  let malo = mActualizada.votosMalo || 0;
-  let bueno = mActualizada.votosBueno || 0;
-  let total = malo + bueno;
-  let pMalo = total>0? Math.round(malo/total*100) : 0;
-  let pBueno = total>0? Math.round(bueno/total*100) : 0;
-  if(total==0){ pMalo=0; pBueno=0; }
-  document.getElementById('mMaloTxt').innerText = `👎🏻 ${pMalo}% (${malo})`;
-  document.getElementById('mBuenoTxt').innerText = `👍🏻 ${pBueno}% (${bueno})`;
-  document.getElementById('barraMalo').style.width = pMalo+'%';
-  document.getElementById('barraBueno').style.width = pBueno+'%';
-  document.getElementById('btnMalo').innerHTML = `👎🏻 MALO ${pMalo}%`;
-  document.getElementById('btnBueno').innerHTML = `👍🏻 BUENO ${pBueno}%`;
+  if(!modeloActual) return; let m=modelosDB.find(x=>x.id===modeloActual.id)||modeloActual;
+  modeloActual=m; let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno;
+  let pMalo=total?Math.round(malo/total*100):0, pBueno=total?Math.round(bueno/total*100):0;
+  document.getElementById('mMaloTxt').innerText=`👎🏻 ${pMalo}% (${malo})`;
+  document.getElementById('mBuenoTxt').innerText=`👍🏻 ${pBueno}% (${bueno})`;
+  document.getElementById('barraMalo').style.width=pMalo+'%';
+  document.getElementById('barraBueno').style.width=pBueno+'%';
 }
-window.votar = async (tipo)=>{
+window.votar=async(tipo)=>{
   if(!modeloActual) return;
-  const ref = doc(db,"modelos",modeloActual.id);
+  const ref=doc(db,"modelos",modeloActual.id);
   try{
-    if(tipo==='MALO'){
-      await updateDoc(ref,{ votosMalo: increment(1) });
-    } else {
-      await updateDoc(ref,{ votosBueno: increment(1) });
-    }
-    let tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
-    let tgId = tgUser?.id || 'desconocido';
-    let tgUsername = tgUser?.username ? `@${tgUser.username}` : `(sin @) ID: ${tgId}`;
-    let mActualizada = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
-    let total = (mActualizada.votosMalo||0)+(mActualizada.votosBueno||0)+1;
-    let msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} CALIFICACIÓN ${tipo}\nModelo: ${modeloActual.perfil} (@${modeloActual.username})\nTotal: ${total} votos\nDe: ${tgUsername}\nID Telegram: ${tgId}`;
-    fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:ID_CANAL,text:msg})});
-  }catch(e){
-    alert("Error votando: "+e.message);
-  }
+    if(tipo==='MALO') await updateDoc(ref,{votosMalo:increment(1)});
+    else await updateDoc(ref,{votosBueno:increment(1)});
+    let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
+    let tg_id = tg?.id || 'anon_'+Math.random().toString(36).slice(2,6);
+    let username = tg?.username? '@'+tg.username : `ID:${tg_id}`;
+    let m = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
+    let total = (m.votosMalo||0)+(m.votosBueno||0)+1;
+    fetch('/api/voto',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tipo,
+        modelo:{perfil:m.perfil, username:m.username},
+        username,
+        tg_id,
+        total
+      })
+    });
+  }catch(e){ alert('Error: '+e.message); }
 }
-const unsub = onSnapshot(collection(db,"modelos"), (snap)=>{
-  modelosDB = [];
-  snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
-  render();
-  if(document.getElementById('modal').style.display==='block'){
-    actualizar();
-  }
+window.compartir=()=>{
+  if(!modeloActual) return;
+  let url=`${location.origin}${location.pathname}?m=${modeloActual.id}`;
+  if(navigator.share) navigator.share({title:modeloActual.perfil,url});
+  else { navigator.clipboard.writeText(url); alert('🔗 Link copiado: '+url); }
+}
+window.fav=()=>{
+  let favs=JSON.parse(localStorage.getItem('favs')||'[]');
+  if(!favs.includes(modeloActual.id)){ favs.push(modeloActual.id); localStorage.setItem('favs',JSON.stringify(favs)); alert('❤️ Guardada'); }
+  else { localStorage.setItem('favs',JSON.stringify(favs.filter(x=>x!==modeloActual.id))); alert('💔 Quitó de favoritos'); }
+}
+function cargarComentarios(modeloId){
+  const q=query(collection(db,"modelos",modeloId,"comentarios"), orderBy("fecha","desc"));
+  comentariosUnsub=onSnapshot(q,(snap)=>{
+    let html=''; snap.forEach(d=>{
+      let c=d.data();
+      html+=`<div class="coment"><b>👤 Anónimo • ${new Date(c.fecha?.seconds*1000||Date.now()).toLocaleDateString()}</b><span>${c.texto}</span></div>`;
+    });
+    document.getElementById('listaComent').innerHTML= html || '<span style="color:#555;font-size:11px">Sé el primero en comentar 🩷</span>';
+  });
+}
+window.enviarComent=async()=>{
+  let txt=document.getElementById('inputComent').value.trim(); if(!txt ||!modeloActual) return;
+  let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
+  let anonId=tg?.id || 'anon_'+Math.random().toString(36).slice(2,7);
+  let tgUser=tg?.username? '@'+tg.username : `ID:${anonId}`;
+  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{
+    texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, fecha: serverTimestamp()
+  });
+  document.getElementById('inputComent').value='';
+}
+onSnapshot(collection(db,"modelos"), (snap)=>{
+  modelosDB=[]; snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
+  buildChips(); filtrar();
+  const params=new URLSearchParams(location.search); let mid=params.get('m');
+  if(mid && document.getElementById('modal').style.display!=='block'){ let found=modelosDB.find(x=>x.id===mid); if(found) abrir(mid); }
+  if(document.getElementById('modal').style.display==='block') actualizar();
 });
 </script>
 </body>
