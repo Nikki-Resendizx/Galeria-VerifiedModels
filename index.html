@@ -6,7 +6,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, increment, addDoc, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, updateDoc, increment, addDoc, query, orderBy, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAIHevrpglvhHK3IsxpnkHlWpxnuf5o1So",
   authDomain: "galeria-verifiedmodels.firebaseapp.com",
@@ -19,7 +19,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 window.db=db; window.collection=collection; window.onSnapshot=onSnapshot;
 window.doc=doc; window.updateDoc=updateDoc; window.increment=increment;
-window.addDoc=addDoc; window.query=query; window.orderBy=orderBy; window.serverTimestamp=serverTimestamp;
+window.addDoc=addDoc; window.query=query; window.orderBy=orderBy; window.serverTimestamp=serverTimestamp; window.deleteDoc=deleteDoc;
 </script>
 <style>
 body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:center}
@@ -134,7 +134,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
           <input id="inputComent" placeholder="Deja tu experiencia (anónimo)..." style="flex:1;background:#111;border:1px solid #333;color:#fff;padding:10px;border-radius:20px;font-size:12px">
           <button onclick="enviarComent()" style="background:#ff69b4;color:#000;border:none;padding:10px 14px;border-radius:20px;font-weight:bold">Enviar</button>
         </div>
-        <div style="font-size:9px;color:#666;margin-top:4px">* Anónimo para todos. Admins ven tu ID por seguridad.</div>
+        <div style="font-size:9px;color:#666;margin-top:4px">* Comentario Anónimo.</div>
       </div>
     </div>
   </div>
@@ -142,6 +142,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 <script type="module">
 let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
 const BOT_LINK = "https://t.me/galeriaVerifiedModels_Bot/Galeria";
+if(!localStorage.getItem('miAnonId')){ let tg=window.Telegram?.WebApp?.initDataUnsafe?.user; localStorage.setItem('miAnonId', tg?.id || 'anon_'+Math.random().toString(36).slice(2,7)); }
 function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.foto4) arr.push(m.foto4); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,5); }
 function yaVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); return!!v[id]; }
 function marcarVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); v[id]=true; localStorage.setItem('votos', JSON.stringify(v)); }
@@ -203,7 +204,6 @@ window.abrir=(id)=>{
   document.getElementById('mContacto').style.display=m.username?'flex':'none';
   let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno, pBueno=total?Math.round(bueno/total*100):0;
   document.getElementById('mVerified').style.display=(total>=5 && pBueno>=80)?'block':'none';
-  // BLOQUEAR SI YA VOTO
   let bloqueo = yaVoto(m.id);
   document.getElementById('btnMalo').disabled = bloqueo;
   document.getElementById('btnBueno').disabled = bloqueo;
@@ -231,28 +231,18 @@ function actualizar(){
 }
 window.votar=async(tipo)=>{
   if(!modeloActual) return;
-  if(yaVoto(modeloActual.id)){
-    alert('😩 Ya votaste por esta modelo, mi amor. Solo 1 voto por modelo.');
-    return;
-  }
+  if(yaVoto(modeloActual.id)){ alert('😩 Ya votaste por esta modelo'); return; }
   const ref=doc(db,"modelos",modeloActual.id);
   try{
-    if(tipo==='MALO') await updateDoc(ref,{votosMalo:increment(1)});
-    else await updateDoc(ref,{votosBueno:increment(1)});
+    if(tipo==='MALO') await updateDoc(ref,{votosMalo:increment(1)}); else await updateDoc(ref,{votosBueno:increment(1)});
     marcarVoto(modeloActual.id);
-    document.getElementById('btnMalo').disabled=true;
-    document.getElementById('btnBueno').disabled=true;
+    document.getElementById('btnMalo').disabled=true; document.getElementById('btnBueno').disabled=true;
     document.getElementById('yaVotoMsg').style.display='block';
-    let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
-    let tg_id = tg?.id || 'anon_'+Math.random().toString(36).slice(2,6);
-    let username = tg?.username? '@'+tg.username : `ID:${tg_id}`;
+    let tg_id = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId');
+    let username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : `ID:${tg_id}`;
     let m = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
     let total = (m.votosMalo||0)+(m.votosBueno||0)+1;
-    fetch('/api/voto',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username}, username, tg_id, total })
-    });
+    fetch('/api/voto',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username}, username, tg_id, total }) });
   }catch(e){ alert('Error: '+e.message); }
 }
 window.compartir=()=>{
@@ -270,31 +260,28 @@ window.fav=()=>{
 function cargarComentarios(modeloId){
   const q=query(collection(db,"modelos",modeloId,"comentarios"), orderBy("fecha","desc"));
   comentariosUnsub=onSnapshot(q,(snap)=>{
+    let miId = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId') || '').toString();
     let html=''; snap.forEach(d=>{
       let c=d.data();
-      html+=`<div class="coment"><b>👤 Anónimo • ${new Date(c.fecha?.seconds*1000||Date.now()).toLocaleDateString()}</b><span>${c.texto}</span></div>`;
+      let esMio = c.tg_id?.toString() === miId;
+      html+=`<div class="coment"><b>👤 Anónimo • ${new Date(c.fecha?.seconds*1000||Date.now()).toLocaleDateString()}</b><span>${c.texto}</span>${esMio?`<br><button onclick="borrarMiComent('${d.id}')" style="background:#222;color:#ff2d2d;border:1px solid #ff2d2d;border-radius:10px;font-size:10px;padding:3px 8px;margin-top:4px;cursor:pointer">🗑️ Borrar mi comentario</button>`:''}</div>`;
     });
     document.getElementById('listaComent').innerHTML= html || '<span style="color:#555;font-size:11px">Sé el primero en comentar 🩷</span>';
   });
 }
+window.borrarMiComent=async(comentId)=>{ if(!modeloActual) return; if(!confirm('¿Borrar tu comentario?')) return; await deleteDoc(doc(db,"modelos",modeloActual.id,"comentarios",comentId)); }
 window.enviarComent=async()=>{
   let txt=document.getElementById('inputComent').value.trim(); if(!txt ||!modeloActual) return;
-  let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
-  let anonId=tg?.id || 'anon_'+Math.random().toString(36).slice(2,7);
-  let tgUser=tg?.username? '@'+tg.username : `ID:${anonId}`;
-  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{
-    texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, fecha: serverTimestamp()
-  });
+  let anonId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId');
+  let tgUser=window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : `ID:${anonId}`;
+  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{ texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, fecha: serverTimestamp() });
   document.getElementById('inputComent').value='';
 }
 onSnapshot(collection(db,"modelos"), (snap)=>{
   modelosDB=[]; snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
   buildChips(); filtrar();
-  // Soporte para?m=ID y?startapp=m_ID (desde el bot)
-  const params=new URLSearchParams(location.search);
-  let mid = params.get('m') || params.get('startapp');
+  const params=new URLSearchParams(location.search); let mid = params.get('m') || params.get('startapp');
   if(mid && mid.startsWith('m_')) mid = mid.replace('m_','');
-  // Telegram WebApp start_param
   let tgStart = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
   if(tgStart && tgStart.startsWith('m_')) mid = tgStart.replace('m_','');
   if(mid && document.getElementById('modal').style.display!=='block'){ let found=modelosDB.find(x=>x.id===mid); if(found) abrir(mid); }
