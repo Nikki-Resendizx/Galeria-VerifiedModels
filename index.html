@@ -142,7 +142,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 <script type="module">
 let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
 const BOT_LINK = "https://t.me/galeriaVerifiedModels_Bot/Galeria";
-function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,4); }
+function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.foto4) arr.push(m.foto4); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,5); }
 function yaVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); return!!v[id]; }
 function marcarVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); v[id]=true; localStorage.setItem('votos', JSON.stringify(v)); }
 function render(lista){
