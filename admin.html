@@ -2,10 +2,11 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Jefa - Verified</title>
+<title>Panel Admin - Verified Models V3 REF</title>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-storage.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAIHevrpglvhHK3IsxpnkHlWpxnuf5o1So",
   authDomain: "galeria-verifiedmodels.firebaseapp.com",
@@ -16,206 +17,219 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-window.db=db; window.col=collection; window.add=addDoc; window.docRef=doc; window.upd=updateDoc; window.del=deleteDoc; window.onSnap=onSnapshot; window.stamp=serverTimestamp;
+const storage = getStorage(app);
+window.db=db; window.storage=storage; window.collection=collection; window.doc=doc;
+window.addDoc=addDoc; window.updateDoc=updateDoc; window.deleteDoc=deleteDoc;
+window.onSnapshot=onSnapshot; window.serverTimestamp=serverTimestamp;
+window.ref=ref; window.uploadBytes=uploadBytes; window.getDownloadURL=getDownloadURL;
 </script>
 <style>
-body{background:#000;color:#fff;font-family:Arial;padding:15px;margin:0;text-align:center}
-#login{margin-top:40px;max-width:340px;margin-left:auto;margin-right:auto;background:#0f000a;border:2px solid #ff69b4;border-radius:22px;padding:20px;box-shadow:0 0 30px rgba(255,105,180,.4)}
-input,textarea,select{width:100%;padding:12px;margin:6px 0 12px;border-radius:10px;border:1px solid #ff69b4;background:#111;color:white;box-sizing:border-box}
-label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:left;margin-top:8px}
-.btn{width:100%;padding:14px;border:none;border-radius:30px;font-weight:bold;margin-top:10px;cursor:pointer}
-.btn-save{background:linear-gradient(90deg,#ffb6da,#ff69b4);color:#000;box-shadow:0 0 20px #ff69b4}
-.serv-grid{display:flex;flex-wrap:wrap;gap:6px;text-align:left}
-.serv-grid span{border:1px solid silver;padding:6px 10px;border-radius:20px;font-size:12px;cursor:pointer}
-.serv-grid span.sel{background:#ff69b4;color:#000;border-color:#fff}
-.upload-box{border:2px dashed #ff69b4;border-radius:15px;padding:12px;background:#0a0a0a}
-.lista{margin-top:25px;border-top:1px solid #222;padding-top:15px}
-.item{background:#111;border:1px solid #333;border-radius:15px;padding:10px;display:flex;gap:10px;align-items:center;margin-bottom:10px;text-align:left}
-.item img{width:55px;height:55px;border-radius:12px;object-fit:cover;border:2px solid #ff69b4}
-.item b{color:#ff8ec3;font-size:13px;display:block}
-.item span{color:silver;font-size:11px}
-.btns-mini{display:flex;gap:5px;margin-left:auto}
-.btn-mini{padding:6px 10px;border-radius:20px;font-size:11px;border:none;cursor:pointer;font-weight:bold}
-.btn-edit{background:#222;color:#ff8ec3;border:1px solid #ff69b4}
-.btn-del{background:#ff2d2d;color:#fff}
-#error{color:#ff4444;font-size:12px;margin-top:10px;display:none}
+body{background:#000;color:#fff;font-family:Arial;margin:0;padding:12px}
+h1{color:#ff69b4;text-align:center;font-size:18px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.top a{color:#fff;text-decoration:none;border:1px solid #ff69b4;padding:6px 12px;border-radius:20px;font-size:12px}
+.form{background:#111;border:1px solid #ff69b4;border-radius:16px;padding:12px;margin:12px 0}
+input, textarea{width:100%;background:#000;border:1px solid #333;color:#fff;padding:10px;border-radius:10px;margin:6px 0;box-sizing:border-box;font-size:13px}
+.row{display:flex;gap:8px}.row>div{flex:1}
+label{font-size:11px;color:#ff8ec3;font-weight:bold;display:block;margin-top:8px;text-align:left}
+.btn{width:100%;padding:14px;background:#ff69b4;color:#000;border:none;border-radius:25px;font-weight:bold;margin-top:10px;cursor:pointer}
+.btn:disabled{opacity:0.5}
+.ref-wrap{margin-top:12px;border:1px dashed #ff69b4;border-radius:14px;padding:10px;background:#0a0a0a}
+.ref-title{color:#ff8ec3;font-size:12px;font-weight:bold;margin-bottom:8px;text-align:left}
+.ref-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.ref-box{border:1px solid #333;border-radius:12px;overflow:hidden;background:#000;position:relative;height:110px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ref-box img{width:100%;height:100%;object-fit:cover}
+.ref-box span{font-size:10px;color:#777;text-align:center;padding:4px}
+.ref-box input{display:none}
+.ref-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer}
+.lista{display:grid;gap:8px;margin-top:12px}
+.card{background:#111;border:1px solid #222;border-radius:14px;padding:8px;display:flex;gap:10px;align-items:center}
+.card img{width:60px;height:60px;border-radius:10px;object-fit:cover}
+.btn-sec{padding:6px 10px;border-radius:20px;border:1px solid #333;background:#222;color:#fff;font-size:11px;cursor:pointer}
+.progress{font-size:10px;color:#00ff88;margin-top:4px;text-align:left}
 </style>
 </head>
 <body>
-<h2 style="color:#ff8ec3;margin:5px 0">👑 𝐏𝐀𝐍𝐄𝐋 𝐉𝐄𝐅𝐀 👑</h2>
-<p style="color:silver;font-size:11px">Verified Models - Solo Admin</p>
-<div id="login">
-<div style="font-size:28px;margin-bottom:8px">🔐</div>
-<p style="color:#ffb6da;font-size:12px;margin:0 0 12px">ACCESO RESTRINGIDO</p>
-<input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
-<button class="btn btn-save" onclick="check()">🔐 𝙀𝙉𝙏𝙍𝘼𝙍 🔐</button>
-<div id="error">❌ Contraseña incorrecta</div>
-<a href="index.html" style="display:block;text-align:center;color:silver;margin-top:15px;font-size:11px;text-decoration:none">← Ver galería</a>
+<div class="top">
+  <a href="index.html">⬅ Galería</a>
+  <h1>🔐 ADMIN V3 + REFS</h1>
+  <span id="contador" style="font-size:10px;color:#555">0</span>
 </div>
-<div id="panel" style="display:none;text-align:left">
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-<span style="color:#ff8ec3;font-size:12px;font-weight:bold">✨ Nueva Modelo</span>
-<button onclick="logout()" style="background:#1a0010;color:#ff7777;border:1px solid #ff69b4;padding:5px 12px;border-radius:20px;font-size:11px">Salir 🔒</button>
-</div>
-<label>Foto de presentación</label>
-<div class="upload-box">
-  <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="cargarDeGaleria(this)">
-  <button type="button" class="btn" style="background:#111;border:1px solid #ff69b4;color:#ff8ec3" onclick="document.getElementById('fileInput').click()">📸 ELEGIR DE GALERÍA</button>
-  <p style="color:silver;font-size:11px;text-align:center;margin:8px 0">o pega link / lo que te mande el bot</p>
-  <input id="foto" placeholder="https://...jpg o base64" oninput="previewUrl(this.value)">
-  <img id="previewImg" style="width:100%;max-height:280px;object-fit:cover;border-radius:12px;margin-top:10px;display:none;border:2px solid #ff69b4">
-</div>
-<label>Nombre del Perfil</label><input id="perfil" placeholder="Ej: Luna VIP 👑">
-<label>@ de la chica (sin @)</label><input id="username" placeholder="luna_vip">
-<label>EDAD</label><input id="edad" type="number" placeholder="22">
-<label>NACIONALIDAD</label>
-<select id="nacionalidad">
-<option>México 🇲🇽</option><option>Colombia 🇨🇴</option><option>Ecuador 🇪🇨</option><option>Venezuela 🇻🇪</option>
-<option>Argentina 🇦🇷</option><option>Chile 🇨🇱</option><option>Perú 🇵🇪</option>
-<option>España 🇪🇸</option><option>USA 🇺🇸</option><option>Brasil 🇧🇷</option>
-</select>
-<label>Servicios (toca para seleccionar)</label>
-<div class="serv-grid" id="servs">
-<span onclick="this.classList.toggle('sel')">ᴢɪɴɢs</span><span onclick="this.classList.toggle('sel')">ᴀᴜᴅɪᴏs</span>
-<span onclick="this.classList.toggle('sel')">ғᴇᴛɪᴄʜᴇs</span><span onclick="this.classList.toggle('sel')">ᴄʜᴀᴛ ʜᴏᴛ</span>
-<span onclick="this.classList.toggle('sel')">ᴅɪᴄᴋ ʀᴀᴛᴇ</span><span onclick="this.classList.toggle('sel')">ᴄᴀɴᴀʟ ᴠɪᴘ</span>
-<span onclick="this.classList.toggle('sel')">ʟʟᴀᴍᴀᴅᴀs</span><span onclick="this.classList.toggle('sel')">ᴄᴏɴᴛᴇɴɪᴅᴏ</span>
-<span onclick="this.classList.toggle('sel')">ᴇɴᴄᴜᴇɴᴛʀᴏs</span><span onclick="this.classList.toggle('sel')">ɴᴏᴠɪᴀ ᴠɪʀᴛᴜᴀʟ</span>
-<span onclick="this.classList.toggle('sel')">ᴠɪᴅᴇᴏʟʟᴀᴍᴀᴅᴀs</span><span onclick="this.classList.toggle('sel')">ᴘᴇʀsᴏɴᴀʟɪᴢᴀᴅᴏs</span>
-<span onclick="this.classList.toggle('sel')">ғᴇɴ-sᴜᴍ | sᴜᴍɪsᴀ</span><span onclick="this.classList.toggle('sel')">ғᴇɴ-ᴅᴏᴍ | ᴅᴏᴍɪɴᴀᴄɪᴏɴ</span>
-</div>
-<label>DESCRIPCIÓN</label><textarea id="desc" rows="3" placeholder="Muy cariñosa, respondo rápido..."></textarea>
-<label>LINK CANAL FREE 💖</label><input id="canal" placeholder="https://t.me/...">
-<button id="btnGuardar" class="btn btn-save" onclick="guardar()">💖 PUBLICAR EN GALERÍA 💖</button>
-<button id="btnCancel" class="btn" style="background:#222;color:silver;display:none" onclick="cancelarEdit()">❌ CANCELAR EDICIÓN</button>
-<div class="lista">
-<h3 style="color:#ff8ec3;font-size:14px">📋 Modelos guardadas (<span id="count">0</span>)</h3>
-<div id="listaModelos"></div>
-<a href="index.html" style="display:block;text-align:center;color:silver;margin-top:15px;font-size:13px;text-decoration:none">← Ver galería</a>
-</div>
-</div>
-<script>
-const CLAVE = "verified2024";
-let editId = null;
-let modelosCache = [];
-function check(){
-  let p = document.getElementById('pass').value;
-  if(p===CLAVE){
-    sessionStorage.setItem('verified_admin','ok');
-    document.getElementById('login').style.display='none';
-    document.getElementById('panel').style.display='block';
-    iniciarFirebase();
-  } else {
-    document.getElementById('error').style.display='block';
-    document.getElementById('pass').value='';
-    setTimeout(()=>document.getElementById('error').style.display='none',2000);
-  }
-}
-function logout(){ sessionStorage.removeItem('verified_admin'); location.reload(); }
-if(sessionStorage.getItem('verified_admin')==='ok'){
-  document.getElementById('login').style.display='none';
-  document.getElementById('panel').style.display='block';
-  setTimeout(iniciarFirebase,500);
-}
-document.getElementById('pass').addEventListener('keypress',e=>{if(e.key==='Enter')check()});
-function cargarDeGaleria(input){
-  let file = input.files[0]; if(!file) return;
-  let reader = new FileReader();
-  reader.onload = function(e){
-    document.getElementById('foto').value = e.target.result;
-    let img = document.getElementById('previewImg'); img.src = e.target.result; img.style.display='block';
-  }; reader.readAsDataURL(file);
-}
-function previewUrl(url){
-  if(url.length>10){ let img=document.getElementById('previewImg'); img.src=url; img.style.display='block'; img.onerror=()=>img.style.display='none'; }
-}
-function iniciarFirebase(){
-  onSnap(col(db,"modelos"), snap=>{
-    modelosCache=[];
-    snap.forEach(d=> modelosCache.push({id:d.id,...d.data()}));
-    listar();
-  });
-}
-function listar(){
-  document.getElementById('count').innerText = modelosCache.length;
-  if(modelosCache.length===0){ document.getElementById('listaModelos').innerHTML='<p style="color:#555;font-size:12px">Aún no hay modelos</p>'; return; }
-  let html="";
-  modelosCache.forEach((m)=>{
-    let total = (m.votosMalo||0)+(m.votosBueno||0);
-    html+=`<div class="item">
-      <img src="${m.foto}" onerror="this.src='Logo.webp'"><div><b>${m.perfil}</b><span>@${m.username} • ${m.edad} años • ${total} votos</span></div>
-      <div class="btns-mini">
-        <button class="btn-mini btn-edit" onclick="editar('${m.id}')">✏️ Editar</button>
-        <button class="btn-mini btn-del" onclick="borrar('${m.id}')">🗑️ Borrar</button>
+
+<div class="form">
+  <input type="hidden" id="editId">
+  <div class="row"><div><label>Perfil</label><input id="perfil"></div><div><label>@ Username</label><input id="username"></div></div>
+  <div class="row"><div><label>Edad</label><input id="edad" type="number"></div><div><label>Nacionalidad</label><input id="nacionalidad"></div></div>
+  <label>Canal Free</label><input id="canal_free">
+  <label>Descripción</label><textarea id="descripcion" rows="2"></textarea>
+  <label>Servicios (coma)</label><input id="servicios" placeholder="Beso, Oral, Anal">
+
+  <label>📸 Foto principal (obligatoria) - puedes pegar link o subir</label>
+  <input id="foto" placeholder="https://...">
+  <input type="file" id="fileFoto" accept="image/*" style="border:1px dashed #ff69b4">
+  <div id="progFoto" class="progress"></div>
+
+  <div class="ref-wrap">
+    <div class="ref-title">📸 Agregar fotos de referencias (opcional) - toca el cuadrito para subir de galería</div>
+    <div class="ref-grid">
+      <div class="ref-box" onclick="document.getElementById('fileRef1').click()">
+        <span id="ref1Ph">+ Ref 1<br>📷 Galería</span>
+        <img id="ref1Img" style="display:none">
+        <button class="ref-del" id="ref1Del" style="display:none" onclick="event.stopPropagation(); quitarRef(1)">✕</button>
+        <input type="file" id="fileRef1" accept="image/*" onchange="subirRef(this,1)">
       </div>
-    </div>`;
-  });
-  document.getElementById('listaModelos').innerHTML=html;
+      <div class="ref-box" onclick="document.getElementById('fileRef2').click()">
+        <span id="ref2Ph">+ Ref 2<br>📷 Galería</span>
+        <img id="ref2Img" style="display:none">
+        <button class="ref-del" id="ref2Del" style="display:none" onclick="event.stopPropagation(); quitarRef(2)">✕</button>
+        <input type="file" id="fileRef2" accept="image/*" onchange="subirRef(this,2)">
+      </div>
+      <div class="ref-box" onclick="document.getElementById('fileRef3').click()">
+        <span id="ref3Ph">+ Ref 3<br>📷 Galería</span>
+        <img id="ref3Img" style="display:none">
+        <button class="ref-del" id="ref3Del" style="display:none" onclick="event.stopPropagation(); quitarRef(3)">✕</button>
+        <input type="file" id="fileRef3" accept="image/*" onchange="subirRef(this,3)">
+      </div>
+    </div>
+    <div id="progRefs" class="progress"></div>
+    <!-- Inputs ocultos que guardan el link final -->
+    <input type="hidden" id="foto2"><input type="hidden" id="foto3"><input type="hidden" id="foto4">
+  </div>
+
+  <button class="btn" id="btnGuardar" onclick="guardar()">💾 Guardar Modelo</button>
+  <button class="btn" style="background:#222;color:#fff;border:1px solid #333" onclick="limpiar()">🧹 Limpiar</button>
+</div>
+
+<input id="buscAdmin" placeholder="🔍 Buscar..." oninput="render()" style="margin-bottom:10px">
+<div id="lista" class="lista"></div>
+
+<script type="module">
+let modelos=[];
+
+window.subirRef = async(input, num)=>{
+  let file=input.files[0]; if(!file) return;
+  let prog=document.getElementById('progRefs');
+  prog.innerText=`⏳ Subiendo ref ${num}...`;
+  try{
+    let name=`refs/${Date.now()}_${num}_${file.name.replace(/[^a-z0-9.]/gi,'_')}`;
+    let storageRef=ref(storage, name);
+    await uploadBytes(storageRef, file);
+    let url=await getDownloadURL(storageRef);
+    document.getElementById(`foto${num===1?2:num===2?3:4}`).value=url;
+    document.getElementById(`ref${num}Img`).src=url;
+    document.getElementById(`ref${num}Img`).style.display='block';
+    document.getElementById(`ref${num}Ph`).style.display='none';
+    document.getElementById(`ref${num}Del`).style.display='block';
+    prog.innerText=`✅ Ref ${num} subida`;
+  }catch(e){ prog.innerText='❌ Error: '+e.message; }
 }
-window.guardar = async()=>{
-  let servicios = [...document.querySelectorAll('.serv-grid span.sel')].map(s=>s.innerText);
-  let m = {
-    foto: document.getElementById('foto').value.trim(),
+
+window.quitarRef=(num)=>{
+  document.getElementById(`foto${num===1?2:num===2?3:4}`).value='';
+  document.getElementById(`ref${num}Img`).style.display='none';
+  document.getElementById(`ref${num}Ph`).style.display='block';
+  document.getElementById(`ref${num}Del`).style.display='none';
+  document.getElementById(`fileRef${num}`).value='';
+}
+
+document.getElementById('fileFoto').addEventListener('change', async(e)=>{
+  let file=e.target.files[0]; if(!file) return;
+  let prog=document.getElementById('progFoto');
+  prog.innerText='⏳ Subiendo principal...';
+  try{
+    let name=`principales/${Date.now()}_${file.name.replace(/[^a-z0-9.]/gi,'_')}`;
+    let storageRef=ref(storage, name);
+    await uploadBytes(storageRef, file);
+    let url=await getDownloadURL(storageRef);
+    document.getElementById('foto').value=url;
+    prog.innerText='✅ Foto principal subida';
+  }catch(err){ prog.innerText='❌ '+err.message; }
+});
+
+function render(){
+  let q=document.getElementById('buscAdmin').value.toLowerCase();
+  let lista=modelos.filter(m=>!q || `${m.perfil} ${m.username}`.toLowerCase().includes(q));
+  document.getElementById('contador').innerText=lista.length+' modelos';
+  document.getElementById('lista').innerHTML=lista.map(m=>`
+    <div class="card">
+      <img src="${m.foto}" onerror="this.src='https://via.placeholder.com/60'">
+      <div style="flex:1;text-align:left"><b>${m.perfil} @${m.username}</b><br><span style="font-size:10px;color:#aaa">${m.edad}A • ${m.nacionalidad}</span></div>
+      <button class="btn-sec" onclick="editar('${m.id}')">✏️</button>
+      <button class="btn-sec" style="color:#ff2d2d" onclick="borrar('${m.id}')">🗑️</button>
+    </div>`).join('');
+}
+
+window.editar=(id)=>{
+  let m=modelos.find(x=>x.id===id); if(!m) return;
+  document.getElementById('editId').value=m.id;
+  document.getElementById('perfil').value=m.perfil||'';
+  document.getElementById('username').value=m.username||'';
+  document.getElementById('edad').value=m.edad||'';
+  document.getElementById('nacionalidad').value=m.nacionalidad||'';
+  document.getElementById('canal_free').value=m.canal_free||'';
+  document.getElementById('descripcion').value=m.descripcion||'';
+  document.getElementById('servicios').value=(m.servicios||[]).join(', ');
+  document.getElementById('foto').value=m.foto||'';
+  document.getElementById('foto2').value=m.foto2||'';
+  document.getElementById('foto3').value=m.foto3||'';
+  document.getElementById('foto4').value=m.foto4||'';
+  // mostrar refs
+  [1,2,3].forEach(num=>{
+    let key=num===1?'foto2':num===2?'foto3':'foto4';
+    let url=m[key]||'';
+    if(url){
+      document.getElementById(`ref${num}Img`).src=url;
+      document.getElementById(`ref${num}Img`).style.display='block';
+      document.getElementById(`ref${num}Ph`).style.display='none';
+      document.getElementById(`ref${num}Del`).style.display='block';
+    }else{ quitarRef(num); }
+  });
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+window.limpiar=()=>{
+  document.getElementById('editId').value='';
+  ['perfil','username','edad','nacionalidad','canal_free','descripcion','servicios','foto','foto2','foto3','foto4'].forEach(id=> document.getElementById(id).value='');
+  [1,2,3].forEach(n=> quitarRef(n));
+  document.getElementById('progFoto').innerText=''; document.getElementById('progRefs').innerText='';
+}
+
+window.guardar=async()=>{
+  let id=document.getElementById('editId').value;
+  let data={
     perfil: document.getElementById('perfil').value.trim(),
     username: document.getElementById('username').value.trim().replace('@',''),
     edad: document.getElementById('edad').value.trim(),
-    nacionalidad: document.getElementById('nacionalidad').value,
-    servicios: servicios,
-    descripcion: document.getElementById('desc').value.trim(),
-    canal_free: document.getElementById('canal').value.trim(),
-    votosMalo: 0,
-    votosBueno: 0,
-    fecha: stamp()
+    nacionalidad: document.getElementById('nacionalidad').value.trim(),
+    canal_free: document.getElementById('canal_free').value.trim(),
+    descripcion: document.getElementById('descripcion').value.trim(),
+    servicios: document.getElementById('servicios').value.split(',').map(s=>s.trim()).filter(Boolean),
+    foto: document.getElementById('foto').value.trim(),
+    foto2: document.getElementById('foto2').value.trim(),
+    foto3: document.getElementById('foto3').value.trim(),
+    foto4: document.getElementById('foto4').value.trim(),
+    updatedAt: serverTimestamp()
   };
-  // Si está editando, no sobreescribir votos
-  if(editId){
-    let existente = modelosCache.find(x=>x.id===editId);
-    if(existente){
-      m.votosMalo = existente.votosMalo || 0;
-      m.votosBueno = existente.votosBueno || 0;
-    }
-  }
-  if(!m.foto ||!m.perfil){ alert("Falta foto y nombre"); return; }
+  if(!data.perfil ||!data.foto) return alert('Falta nombre y foto principal');
+  document.getElementById('btnGuardar').disabled=true;
+  document.getElementById('btnGuardar').innerText='⏳ Guardando...';
   try{
-    if(editId){
-      await upd(docRef(db,"modelos",editId), m);
-      alert("✅ Cambios guardados!");
-    } else {
-      await add(col(db,"modelos"), m);
-      alert("¡Publicada en Firebase! 🩷");
-    }
-    limpiar();
-  }catch(e){ alert("Error: "+e.message); }
+    if(id){ await updateDoc(doc(db,"modelos",id), data); alert('✅ Actualizada'); }
+    else { data.votosBueno=0; data.votosMalo=0; data.createdAt=serverTimestamp(); await addDoc(collection(db,"modelos"), data); alert('✅ Creada'); limpiar(); }
+  }catch(e){ alert('Error: '+e.message); }
+  document.getElementById('btnGuardar').disabled=false;
+  document.getElementById('btnGuardar').innerText='💾 Guardar Modelo';
 }
-window.editar = (id)=>{
-  let m = modelosCache.find(x=>x.id===id);
-  if(!m) return;
-  editId=id;
-  document.getElementById('foto').value=m.foto; previewUrl(m.foto);
-  document.getElementById('perfil').value=m.perfil;
-  document.getElementById('username').value=m.username;
-  document.getElementById('edad').value=m.edad;
-  document.getElementById('nacionalidad').value=m.nacionalidad;
-  document.getElementById('desc').value=m.descripcion;
-  document.getElementById('canal').value=m.canal_free;
-  document.querySelectorAll('.serv-grid span').forEach(s=>{ s.classList.toggle('sel', m.servicios && m.servicios.includes(s.innerText)); });
-  document.getElementById('btnGuardar').innerText="💾 GUARDAR CAMBIOS 💾";
-  document.getElementById('btnCancel').style.display='block';
-  window.scrollTo({top:0, behavior:'smooth'});
+
+window.borrar=async(id)=>{
+  if(!confirm('¿Borrar?')) return;
+  await deleteDoc(doc(db,"modelos",id));
 }
-window.borrar = async(id)=>{
-  if(!confirm("¿Seguro que quieres BORRAR a esta modelo? 😢")) return;
-  await del(docRef(db,"modelos",id));
-}
-window.cancelarEdit = ()=>{ editId=null; limpiar(); }
-function limpiar(){
-  ['foto','perfil','username','edad','desc','canal'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('previewImg').style.display='none';
-  document.querySelectorAll('.serv-grid span.sel').forEach(s=>s.classList.remove('sel'));
-  document.getElementById('btnGuardar').innerText="💖 PUBLICAR EN GALERÍA 💖";
-  document.getElementById('btnCancel').style.display='none';
-  editId=null;
-}
+
+onSnapshot(collection(db,"modelos"), snap=>{
+  modelos=[]; snap.forEach(d=> modelos.push({id:d.id,...d.data()}));
+  render();
+});
 </script>
 </body>
 </html>
