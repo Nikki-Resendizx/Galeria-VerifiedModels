@@ -65,6 +65,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 .barra-bueno{background:#00ff88}
 .btns{display:flex;gap:8px;margin-top:12px}
 .btn{flex:1;padding:14px;border:none;border-radius:30px;font-weight:bold;cursor:pointer;font-size:14px}
+.btn:disabled{opacity:0.3;cursor:not-allowed}
 .btn-malo{background:#222;color:#ff2d2d;border:2px solid #ff2d2d}
 .btn-bueno{background:#222;color:#00ff88;border:2px solid #00ff88}
 .btn-canal{background:linear-gradient(90deg,#ffb6da,#ff69b4);color:#000;width:100%;margin-top:10px;padding:16px 10px;border:none;border-radius:30px;font-weight:bold;box-shadow:0 0 20px #ff69b4;display:block;text-decoration:none;box-sizing:border-box;text-align:center}
@@ -80,7 +81,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 <body>
 <div class="topbar">
   <div class="top-left"><a href="admin.html">🔐 Panel</a></div>
-  <div style="color:#ff8ec3;font-weight:bold;font-size:12px">👑 Ꮆ⍲ꮮⲉꮢꭵ⍲ ꪜⲉꮢꭵ𑣂ꭵⲉꭰ Ꮇ𖹭ꭰⲉꮮꮪ 👑</div>
+  <div style="color:#ff8ec3;font-weight:bold;font-size:12px">👑 VERIFIED MODELS V3 👑</div>
   <img src="Logo.webp" class="logo-mini" onerror="this.src='logo.webp'">
 </div>
 <div class="search-wrap">
@@ -119,6 +120,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
         <button id="btnMalo" class="btn btn-malo" onclick="votar('MALO')">👎🏻 MALO</button>
         <button id="btnBueno" class="btn btn-bueno" onclick="votar('BUENO')">👍🏻 BUENO</button>
       </div>
+      <div id="yaVotoMsg" style="display:none;color:#00ff88;font-size:12px;margin-top:8px;font-weight:bold">✅ Ya votaste por esta modelo</div>
       <a id="mCanal" class="btn-canal" target="_blank">💖 𝐂𝐀𝐍𝐀𝐋 𝐅𝐑𝐄𝐄 💖</a>
       <a id="mContacto" class="btn-contact" target="_blank">✈️ 𝘾𝙊𝙉𝙏𝘼𝘾𝙏𝘼𝙇𝘼 𝘼𝙌𝙐𝙄 💬</a>
       <div style="display:flex;gap:8px;margin-top:10px">
@@ -139,7 +141,10 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 </div>
 <script type="module">
 let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
+const BOT_LINK = "https://t.me/galeriaVerifiedModels_Bot/Galeria";
 function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,4); }
+function yaVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); return!!v[id]; }
+function marcarVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); v[id]=true; localStorage.setItem('votos', JSON.stringify(v)); }
 function render(lista){
   document.getElementById('contador').innerText=`💖 ${lista.length} modelos`;
   const gal=document.getElementById('galeria');
@@ -198,6 +203,11 @@ window.abrir=(id)=>{
   document.getElementById('mContacto').style.display=m.username?'flex':'none';
   let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno, pBueno=total?Math.round(bueno/total*100):0;
   document.getElementById('mVerified').style.display=(total>=5 && pBueno>=80)?'block':'none';
+  // BLOQUEAR SI YA VOTO
+  let bloqueo = yaVoto(m.id);
+  document.getElementById('btnMalo').disabled = bloqueo;
+  document.getElementById('btnBueno').disabled = bloqueo;
+  document.getElementById('yaVotoMsg').style.display = bloqueo? 'block' : 'none';
   actualizar();
   cargarComentarios(m.id);
   document.getElementById('modal').style.display='block';
@@ -221,10 +231,18 @@ function actualizar(){
 }
 window.votar=async(tipo)=>{
   if(!modeloActual) return;
+  if(yaVoto(modeloActual.id)){
+    alert('😩 Ya votaste por esta modelo, mi amor. Solo 1 voto por modelo.');
+    return;
+  }
   const ref=doc(db,"modelos",modeloActual.id);
   try{
     if(tipo==='MALO') await updateDoc(ref,{votosMalo:increment(1)});
     else await updateDoc(ref,{votosBueno:increment(1)});
+    marcarVoto(modeloActual.id);
+    document.getElementById('btnMalo').disabled=true;
+    document.getElementById('btnBueno').disabled=true;
+    document.getElementById('yaVotoMsg').style.display='block';
     let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
     let tg_id = tg?.id || 'anon_'+Math.random().toString(36).slice(2,6);
     let username = tg?.username? '@'+tg.username : `ID:${tg_id}`;
@@ -233,21 +251,16 @@ window.votar=async(tipo)=>{
     fetch('/api/voto',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        tipo,
-        modelo:{perfil:m.perfil, username:m.username},
-        username,
-        tg_id,
-        total
-      })
+      body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username}, username, tg_id, total })
     });
   }catch(e){ alert('Error: '+e.message); }
 }
 window.compartir=()=>{
   if(!modeloActual) return;
-  let url=`${location.origin}${location.pathname}?m=${modeloActual.id}`;
-  if(navigator.share) navigator.share({title:modeloActual.perfil,url});
-  else { navigator.clipboard.writeText(url); alert('🔗 Link copiado: '+url); }
+  let botUrl = `${BOT_LINK}?startapp=m_${modeloActual.id}`;
+  let texto = `👑 ${modeloActual.perfil} - @${modeloActual.username} 💖\nMira su perfil verificado aquí 👇\n${botUrl}`;
+  if(navigator.share){ navigator.share({title:modeloActual.perfil, text:texto, url:botUrl}); }
+  else { navigator.clipboard.writeText(botUrl); alert('🔗 Link del BOT copiado:\n'+botUrl); }
 }
 window.fav=()=>{
   let favs=JSON.parse(localStorage.getItem('favs')||'[]');
@@ -277,7 +290,13 @@ window.enviarComent=async()=>{
 onSnapshot(collection(db,"modelos"), (snap)=>{
   modelosDB=[]; snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
   buildChips(); filtrar();
-  const params=new URLSearchParams(location.search); let mid=params.get('m');
+  // Soporte para?m=ID y?startapp=m_ID (desde el bot)
+  const params=new URLSearchParams(location.search);
+  let mid = params.get('m') || params.get('startapp');
+  if(mid && mid.startsWith('m_')) mid = mid.replace('m_','');
+  // Telegram WebApp start_param
+  let tgStart = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
+  if(tgStart && tgStart.startsWith('m_')) mid = tgStart.replace('m_','');
   if(mid && document.getElementById('modal').style.display!=='block'){ let found=modelosDB.find(x=>x.id===mid); if(found) abrir(mid); }
   if(document.getElementById('modal').style.display==='block') actualizar();
 });
