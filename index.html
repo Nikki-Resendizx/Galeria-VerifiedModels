@@ -134,7 +134,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
           <input id="inputComent" placeholder="Deja tu experiencia (anónimo)..." style="flex:1;background:#111;border:1px solid #333;color:#fff;padding:10px;border-radius:20px;font-size:12px">
           <button onclick="enviarComent()" style="background:#ff69b4;color:#000;border:none;padding:10px 14px;border-radius:20px;font-weight:bold">Enviar</button>
         </div>
-        <div style="font-size:9px;color:#666;margin-top:4px">* Comentario Anónimo.</div>
+        <div style="font-size:9px;color:#666;margin-top:4px">* Anónimo para todos. Tú puedes borrar tu comentario. Admin ve tu ID.</div>
       </div>
     </div>
   </div>
@@ -272,10 +272,26 @@ function cargarComentarios(modeloId){
 window.borrarMiComent=async(comentId)=>{ if(!modeloActual) return; if(!confirm('¿Borrar tu comentario?')) return; await deleteDoc(doc(db,"modelos",modeloActual.id,"comentarios",comentId)); }
 window.enviarComent=async()=>{
   let txt=document.getElementById('inputComent').value.trim(); if(!txt ||!modeloActual) return;
-  let anonId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId');
-  let tgUser=window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : `ID:${anonId}`;
-  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{ texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, fecha: serverTimestamp() });
+  let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
+  let anonId = tg?.id || localStorage.getItem('miAnonId');
+  let tgUser = tg?.username? '@'+tg.username : `ID:${anonId}`;
+  let nombre = tg?.first_name || 'Anónimo';
+  let last = tg?.last_name || '';
+  let fullNombre = (nombre+' '+last).trim();
+  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{ texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, tg_nombre: fullNombre, fecha: serverTimestamp() });
   document.getElementById('inputComent').value='';
+  // === AVISO AL CANAL PRIVADO ===
+  try{
+    fetch('/api/comentario',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        modelo: { perfil: modeloActual.perfil, username: modeloActual.username, id: modeloActual.id },
+        usuario: { nombre: fullNombre, username: tgUser, id: anonId },
+        comentario: txt
+      })
+    });
+  }catch(e){}
 }
 onSnapshot(collection(db,"modelos"), (snap)=>{
   modelosDB=[]; snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
