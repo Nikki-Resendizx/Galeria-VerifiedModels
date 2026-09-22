@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Panel Jefa - Verified</title>
+<title>Panel Jefa V3.3 - Avisos Fix</title>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
@@ -51,8 +51,8 @@ label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:lef
 </style>
 </head>
 <body>
-<h2 style="color:#ff8ec3;margin:5px 0">👑 𝐏𝐀𝐍𝐄𝐋 𝐉𝐄𝐅𝐀 👑</h2>
-<p style="color:silver;font-size:11px">Verified Models - Solo Admin</p>
+<h2 style="color:#ff8ec3;margin:5px 0">👑 𝐏𝐀𝐍𝐄𝐋 𝐉𝐄𝐅𝐀 V3.3 👑</h2>
+<p style="color:silver;font-size:11px">Avisos a canal -1004377732507 activo</p>
 <div id="login">
 <div style="font-size:28px;margin-bottom:8px">🔐</div>
 <p style="color:#ffb6da;font-size:12px;margin:0 0 12px">ACCESO RESTRINGIDO</p>
@@ -125,7 +125,6 @@ label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:lef
 <a href="index.html" style="display:block;text-align:center;color:silver;margin-top:15px;font-size:13px;text-decoration:none">← Ver galería</a>
 </div>
 </div>
-
 <div id="modalComent" onclick="if(event.target==this) this.style.display='none'">
   <div class="coment-box">
     <h3 style="color:#ff8ec3;margin:0 0 10px">💬 Comentarios - <span id="comentModelo"></span></h3>
@@ -133,7 +132,6 @@ label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:lef
     <button class="btn" style="background:#222;color:#fff" onclick="document.getElementById('modalComent').style.display='none'">Cerrar</button>
   </div>
 </div>
-
 <script>
 let editId = null;
 let modelosCache = [];
@@ -201,6 +199,15 @@ function listar(){
   });
   document.getElementById('listaModelos').innerHTML=html;
 }
+async function avisarNuevaModelo(perfil, username, esEdicion){
+  try{
+    await fetch('/api/nueva_modelo',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ perfil: perfil + (esEdicion? ' (EDITADA)' : ''), username })
+    });
+  }catch(e){ console.log('Aviso no enviado', e); }
+}
 window.guardar = async()=>{
   let servicios = [...document.querySelectorAll('.serv-grid span.sel')].map(s=>s.innerText);
   let m = {
@@ -223,8 +230,15 @@ window.guardar = async()=>{
   } else { m.votosMalo=0; m.votosBueno=0; }
   if(!m.foto ||!m.perfil){ alert("Falta foto y nombre"); return; }
   try{
-    if(editId){ await upd(docRef(db,"modelos",editId), m); alert("✅ Cambios guardados!"); }
-    else { await add(col(db,"modelos"), m); alert("¡Publicada! 🩷"); }
+    if(editId){
+      await upd(docRef(db,"modelos",editId), m);
+      await avisarNuevaModelo(m.perfil, m.username, true);
+      alert("✅ Cambios guardados! Aviso enviado a canal");
+    } else {
+      await add(col(db,"modelos"), m);
+      await avisarNuevaModelo(m.perfil, m.username, false);
+      alert("¡Publicada! 🩷 Aviso enviado a -1004377732507");
+    }
     limpiar();
   }catch(e){ alert("Error: "+e.message); }
 }
