@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verified Models V3 ULTRA</title>
+<title>Verified Models V3.3 ULTRA - Avisos Fix</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
@@ -229,6 +229,7 @@ function actualizar(){
   document.getElementById('barraMalo').style.width=pMalo+'%';
   document.getElementById('barraBueno').style.width=pBueno+'%';
 }
+// ✅ FIX V3.3 - VOTO CON AVISO A CANAL -1004377732507 VIA CLOUDFLARE FUNCTIONS
 window.votar=async(tipo)=>{
   if(!modeloActual) return;
   if(yaVoto(modeloActual.id)){ alert('😩 Ya votaste por esta modelo'); return; }
@@ -242,7 +243,8 @@ window.votar=async(tipo)=>{
     let username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : `ID:${tg_id}`;
     let m = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
     let total = (m.votosMalo||0)+(m.votosBueno||0)+1;
-    fetch('/api/voto',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username}, username, tg_id, total }) });
+    // AVISO A CANAL - CLOUDFLARE PAGES FUNCTION
+    fetch('/api/voto',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username, id:m.id}, username, tg_id, total }) }).catch(()=>{});
   }catch(e){ alert('Error: '+e.message); }
 }
 window.compartir=()=>{
@@ -270,38 +272,39 @@ function cargarComentarios(modeloId){
   });
 }
 window.borrarMiComent=async(comentId)=>{ if(!modeloActual) return; if(!confirm('¿Borrar tu comentario?')) return; await deleteDoc(doc(db,"modelos",modeloActual.id,"comentarios",comentId)); }
+// ✅ FIX V3.3 - COMENTARIO CON AVISO A CANAL -1004377732507
 window.enviarComent=async()=>{
-  let txt=document.getElementById('inputComent').value.trim(); if(!txt ||!modeloActual) return;
-  let tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
-  let anonId = tg?.id || localStorage.getItem('miAnonId');
-  let tgUser = tg?.username? '@'+tg.username : `ID:${anonId}`;
-  let nombre = tg?.first_name || 'Anónimo';
-  let last = tg?.last_name || '';
-  let fullNombre = (nombre+' '+last).trim();
-  await addDoc(collection(db,"modelos",modeloActual.id,"comentarios"),{ texto:txt, anonimo:true, tg_id: anonId, tg_username: tgUser, tg_nombre: fullNombre, fecha: serverTimestamp() });
+  let txt=document.getElementById('inputComent').value.trim();
+  if(!txt ||!modeloActual) return;
+  let tg_id = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId') || '').toString();
+  let tg_username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : 'Anon_'+tg_id.slice(0,5);
+  let m = modeloActual;
   document.getElementById('inputComent').value='';
-  // === AVISO AL CANAL PRIVADO ===
   try{
+    await addDoc(collection(db,"modelos",m.id,"comentarios"),{ texto:txt, tg_id:tg_id, tg_username:tg_username, username:tg_username, fecha:serverTimestamp() });
+    // AVISO A CANAL - CLOUDFLARE PAGES FUNCTION
     fetch('/api/comentario',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        modelo: { perfil: modeloActual.perfil, username: modeloActual.username, id: modeloActual.id },
-        usuario: { nombre: fullNombre, username: tgUser, id: anonId },
-        comentario: txt
+        modelo:{perfil:m.perfil, username:m.username, id:m.id},
+        comentario:txt,
+        texto:txt,
+        usuario:{nombre:tg_username, username:tg_username, id:tg_id, comentario:txt},
+        username:tg_username,
+        tg_id:tg_id
       })
-    });
-  }catch(e){}
+    }).catch(()=>{});
+  }catch(e){ alert('Error: '+e.message); }
 }
+// INIT FIREBASE - CARGA MODELOS
 onSnapshot(collection(db,"modelos"), (snap)=>{
   modelosDB=[]; snap.forEach(d=> modelosDB.push({id:d.id,...d.data()}));
-  buildChips(); filtrar();
-  const params=new URLSearchParams(location.search); let mid = params.get('m') || params.get('startapp');
-  if(mid && mid.startsWith('m_')) mid = mid.replace('m_','');
-  let tgStart = window.Telegram?.WebApp?.initDataUnsafe?.start_param;
-  if(tgStart && tgStart.startsWith('m_')) mid = tgStart.replace('m_','');
-  if(mid && document.getElementById('modal').style.display!=='block'){ let found=modelosDB.find(x=>x.id===mid); if(found) abrir(mid); }
-  if(document.getElementById('modal').style.display==='block') actualizar();
+  buildChips();
+  filtrar();
+  let urlParams = new URLSearchParams(window.location.search);
+  let mId = urlParams.get('m');
+  if(mId){ setTimeout(()=>abrir(mId),800); }
 });
 </script>
 </body>
