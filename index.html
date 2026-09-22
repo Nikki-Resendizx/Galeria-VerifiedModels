@@ -141,7 +141,7 @@ body{background:#000;color:#fff;font-family:Arial;margin:0;padding:0;text-align:
 </div>
 <script type="module">
 let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
-const BOT_LINK = "https://t.me/galeriaVerifiedModels_Bot/Galeria";
+const BOT_LINK = "https://t.me/GaleriaVerifiedModels_bot/Galeria";
 if(!localStorage.getItem('miAnonId')){ let tg=window.Telegram?.WebApp?.initDataUnsafe?.user; localStorage.setItem('miAnonId', tg?.id || 'anon_'+Math.random().toString(36).slice(2,7)); }
 function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.foto4) arr.push(m.foto4); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,5); }
 function yaVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); return!!v[id]; }
@@ -249,10 +249,17 @@ window.votar=async(tipo)=>{
 }
 window.compartir=()=>{
   if(!modeloActual) return;
-  let botUrl = `${BOT_LINK}?startapp=m_${modeloActual.id}`;
-  let texto = `👑 ${modeloActual.perfil} - @${modeloActual.username} 💖\nMira su perfil verificado aquí 👇\n${botUrl}`;
-  if(navigator.share){ navigator.share({title:modeloActual.perfil, text:texto, url:botUrl}); }
-  else { navigator.clipboard.writeText(botUrl); alert('🔗 Link del BOT copiado:\n'+botUrl); }
+  const botUrl = `${BOT_LINK}?startapp=m_${encodeURIComponent(modeloActual.id)}`;
+  const texto = `👑 ${modeloActual.perfil} - @${modeloActual.username} 💖\\nMira su perfil verificado aquí 👇\\n${botUrl}`;
+  if(navigator.share){
+    navigator.share({title:modeloActual.perfil, text:texto, url:botUrl}).catch(()=>{});
+  }else if(navigator.clipboard){
+    navigator.clipboard.writeText(botUrl).then(()=>{
+      alert('🔗 Link directo al perfil copiado:\\n'+botUrl);
+    }).catch(()=>alert('🔗 Link directo al perfil:\\n'+botUrl));
+  }else{
+    alert('🔗 Link directo al perfil:\\n'+botUrl);
+  }
 }
 window.fav=()=>{
   let favs=JSON.parse(localStorage.getItem('favs')||'[]');
@@ -303,7 +310,16 @@ onSnapshot(collection(db,"modelos"), (snap)=>{
   buildChips();
   filtrar();
   let urlParams = new URLSearchParams(window.location.search);
+  let startParam =
+    urlParams.get('startapp') ||
+    urlParams.get('tgWebAppStartParam') ||
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
+    '';
   let mId = urlParams.get('m');
+  if(!mId && startParam){
+    const match = String(startParam).match(/^m_(.+)$/);
+    if(match) mId = decodeURIComponent(match[1]);
+  }
   if(mId){ setTimeout(()=>abrir(mId),800); }
 });
 </script>
