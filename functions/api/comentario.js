@@ -1,11 +1,4 @@
-export async function onRequestPost(context) {
-  try {
-    const { modelo, comentario, texto, username, tg_id, usuario } = await context.request.json();
-    const BOT_TOKEN = context.env.BOT_TOKEN;
-    const CANAL_ID = context.env.CANAL_ID;
-    if (!BOT_TOKEN || !CANAL_ID) return new Response(JSON.stringify({ok:false}),{status:200});
-    const msg = `💬 NUEVO COMENTARIO\n👑 ${modelo?.perfil} (@${modelo?.username})\n💭 ${comentario||texto||'Sin texto'}\n👤 ${username||usuario?.username||'Anon'} ID:${tg_id||'?'}`;
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CANAL_ID,text:msg})});
-    return new Response(JSON.stringify({ok:true}),{status:200});
-  } catch(e){ return new Response(JSON.stringify({ok:false}),{status:200}); }
-}
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+const clean=(v,max=300)=>String(v??"").trim().slice(0,max);
+export async function onRequestPost(context){
+ try{ const body=await context.request.json(),modelo=body.modelo||{}; const perfil=clean(modelo.perfil,120),username=clean(modelo.username,80).replace(/^@/,""); const texto=clean(body.comentario||body.texto,500),tg_id=clean(body.tg_id,64),actor=clean(body.username||body.usuario?.username,100); const token=context.env.BOT_TOKEN,canal=context.env.CANAL_ID||"-1004377732507"; if(!perfil||!texto||!tg_id)return json({ok:false,error:"Comentario inválido"},400); if(texto.length<2)return json({ok:false,error:"Comentario demasiado corto"},400); if(!token)return json({ok:false,error:"BOT_TOKEN no configurado"},500); const msg="💬 NUEVO COMENTARIO\n👑 "+perfil+" (@"+username+")\n💭 "+texto+"\n👤 "+(actor||"Anon")+" ID:"+tg_id; const tg=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:canal,text:msg})}); if(!tg.ok)return json({ok:false,error:"Telegram rechazó la notificación"},502); return json({ok:true}); } catch(e){return json({ok:false,error:"Solicitud inválida"},400);} }
