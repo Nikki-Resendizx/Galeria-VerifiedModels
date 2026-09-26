@@ -6,7 +6,7 @@
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
-import { getFirestore, collection, onSnapshot, doc, updateDoc, increment, addDoc, query, orderBy, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, doc, getDoc, runTransaction, updateDoc, increment, addDoc, query, orderBy, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
 const firebaseConfig = {
   apiKey: "AIzaSyAIHevrpglvhHK3IsxpnkHlWpxnuf5o1So",
   authDomain: "galeria-verifiedmodels.firebaseapp.com",
@@ -144,8 +144,19 @@ let modeloActual=null, modelosDB=[], filtroServicio=null, currentSlide=0;
 const BOT_LINK = "https://t.me/GaleriaVerifiedModels_bot/Galeria";
 if(!localStorage.getItem('miAnonId')){ let tg=window.Telegram?.WebApp?.initDataUnsafe?.user; localStorage.setItem('miAnonId', tg?.id || 'anon_'+Math.random().toString(36).slice(2,7)); }
 function getFotos(m){ let arr=[m.foto]; if(m.foto2) arr.push(m.foto2); if(m.foto3) arr.push(m.foto3); if(m.foto4) arr.push(m.foto4); if(m.fotos && Array.isArray(m.fotos)) arr = arr.concat(m.fotos); return [...new Set(arr)].filter(Boolean).slice(0,5); }
-function yaVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); return!!v[id]; }
-function marcarVoto(id){ let v=JSON.parse(localStorage.getItem('votos')||'{}'); v[id]=true; localStorage.setItem('votos', JSON.stringify(v)); }
+function getVoterId(){
+  const tg=window.Telegram?.WebApp?.initDataUnsafe?.user;
+  return String(tg?.id || localStorage.getItem('miAnonId') || 'anon');
+}
+async function yaVoto(id){
+  try {
+    const snap=await getDoc(doc(db,"modelos",id,"votos",getVoterId()));
+    return snap.exists();
+  } catch(e) {
+    console.error('No se pudo consultar el voto:',e);
+    return false;
+  }
+}
 function render(lista){
   document.getElementById('contador').innerText=`💖 ${lista.length} modelos`;
   const gal=document.getElementById('galeria');
@@ -185,7 +196,7 @@ window.filtrar=()=>{
   render(lista);
 }
 let comentariosUnsub=null;
-window.abrir=(id)=>{
+window.abrir=async(id)=>{
   let m=modelosDB.find(x=>x.id===id); if(!m) return; modeloActual=m; currentSlide=0;
   let fotos=getFotos(m);
   document.getElementById('track').innerHTML=fotos.map(f=>`<img src="${f}" onerror="this.src='Logo.webp'">`).join('');
@@ -204,10 +215,10 @@ window.abrir=(id)=>{
   document.getElementById('mContacto').style.display=m.username?'flex':'none';
   let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno, pBueno=total?Math.round(bueno/total*100):0;
   document.getElementById('mVerified').style.display=(total>=5 && pBueno>=80)?'block':'none';
-  let bloqueo = yaVoto(m.id);
+  const bloqueo = await yaVoto(m.id);
   document.getElementById('btnMalo').disabled = bloqueo;
   document.getElementById('btnBueno').disabled = bloqueo;
-  document.getElementById('yaVotoMsg').style.display = bloqueo? 'block' : 'none';
+  document.getElementById('yaVotoMsg').style.display = bloqueo ? 'block' : 'none';
   actualizar();
   cargarComentarios(m.id);
   document.getElementById('modal').style.display='block';
@@ -232,19 +243,35 @@ function actualizar(){
 // ✅ FIX V3.3 - VOTO CON AVISO A CANAL -1004377732507 VIA CLOUDFLARE FUNCTIONS
 window.votar=async(tipo)=>{
   if(!modeloActual) return;
-  if(yaVoto(modeloActual.id)){ alert('😩 Ya votaste por esta modelo'); return; }
-  const ref=doc(db,"modelos",modeloActual.id);
+  const id=modeloActual.id;
+  const voterId=getVoterId();
   try{
-    if(tipo==='MALO') await updateDoc(ref,{votosMalo:increment(1)}); else await updateDoc(ref,{votosBueno:increment(1)});
-    marcarVoto(modeloActual.id);
-    document.getElementById('btnMalo').disabled=true; document.getElementById('btnBueno').disabled=true;
+    const result=await runTransaction(db,async(tx)=>{
+      const ref=doc(db,"modelos",id);
+      const voteRef=doc(db,"modelos",id,"votos",voterId);
+      const snap=await tx.get(ref);
+      const previous=await tx.get(voteRef);
+      if(!snap.exists()) throw new Error('Modelo no encontrada');
+      if(previous.exists()) return {registered:false,bueno:Number(snap.data().votosBueno||0),malo:Number(snap.data().votosMalo||0)};
+      const data=snap.data();
+      const bueno=Number(data.votosBueno||0)+(tipo==='BUENO'?1:0);
+      const malo=Number(data.votosMalo||0)+(tipo==='MALO'?1:0);
+      tx.update(ref,{votosBueno:bueno,votosMalo:malo,actualizado:new Date().toISOString()});
+      tx.set(voteRef,{type:tipo==='BUENO'?'bueno':'malo',creado:new Date().toISOString()});
+      return {registered:true,bueno,malo};
+    });
+    if(!result.registered){
+      alert('😩 Ya votaste por esta modelo');
+      return;
+    }
+    document.getElementById('btnMalo').disabled=true;
+    document.getElementById('btnBueno').disabled=true;
     document.getElementById('yaVotoMsg').style.display='block';
-    let tg_id = window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId');
-    let username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : `ID:${tg_id}`;
-    let m = modelosDB.find(x=>x.id===modeloActual.id) || modeloActual;
-    let total = (m.votosMalo||0)+(m.votosBueno||0)+1;
-    // AVISO A CANAL - CLOUDFLARE PAGES FUNCTION
-    fetch('/api/voto',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tipo, modelo:{perfil:m.perfil, username:m.username, id:m.id}, username, tg_id, total }) }).catch(()=>{});
+    let tg_id=window.Telegram?.WebApp?.initDataUnsafe?.user?.id || voterId;
+    let username=window.Telegram?.WebApp?.initDataUnsafe?.user?.username ? '@'+window.Telegram.WebApp.initDataUnsafe.user.username : 'ID:'+tg_id;
+    let m=modelosDB.find(x=>x.id===id)||modeloActual;
+    const total=result.bueno+result.malo;
+    fetch('/api/voto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,modelo:{perfil:m.perfil,username:m.username,id:m.id},username,tg_id,total})}).catch(()=>{});
   }catch(e){ alert('Error: '+e.message); }
 }
 window.compartir=()=>{
