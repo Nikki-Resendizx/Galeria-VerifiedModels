@@ -228,7 +228,7 @@ window.guardar = async()=>{
     servicios: servicios,
     descripcion: document.getElementById('desc').value.trim(),
     canal_free: document.getElementById('canal').value.trim(),
-    fecha: stamp()
+    createdAt: stamp(), fecha: stamp()
   };
   if(editId){
     let existente = modelosCache.find(x=>x.id===editId);
@@ -266,11 +266,26 @@ window.editar = (id)=>{
   document.getElementById('btnCancel').style.display='block';
   window.scrollTo({top:0, behavior:'smooth'});
 }
-window.borrar = async(id)=>{ if(!confirm("¿Borrar modelo?")) return; await del(docRef(db,"modelos",id)); }
+window.borrar = async(id)=>{
+  if(!confirm("¿Borrar modelo y todos sus votos/comentarios?")) return;
+  try{
+    const root=docRef(db,"modelos",id);
+    for(const sub of ["votos","comentarios"]){
+      const snap=await getDocs(col(db,"modelos",id,sub));
+      for(const d of snap.docs) await del(d.ref);
+    }
+    await del(root);
+    alert("🗑️ Modelo y datos asociados eliminados");
+  }catch(e){ alert("Error al borrar: "+e.message); }
+}
 window.resetVotos = async(id)=>{
-  if(!confirm("¿♻️ Resetear votos? Se pondrá en 0 buenos y 0 malos")) return;
-  await upd(docRef(db,"modelos",id), { votosMalo: 0, votosBueno: 0 });
-  alert("♻️ Votos reseteados a 0");
+  if(!confirm("¿♻️ Resetear votos? También se borrará el registro de voto de cada usuario.")) return;
+  try{
+    const snap=await getDocs(col(db,"modelos",id,"votos"));
+    for(const d of snap.docs) await del(d.ref);
+    await upd(docRef(db,"modelos",id), { votosMalo: 0, votosBueno: 0, actualizado: new Date().toISOString() });
+    alert("♻️ Votos y registros individuales reseteados");
+  }catch(e){ alert("Error al resetear votos: "+e.message); }
 }
 window.cancelarEdit = ()=>{ editId=null; limpiar(); }
 function limpiar(){
