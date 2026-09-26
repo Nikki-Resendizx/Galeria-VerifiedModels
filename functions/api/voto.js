@@ -1,11 +1,4 @@
-export async function onRequestPost(context) {
-  try {
-    const { tipo, modelo, username, tg_id, total } = await context.request.json();
-    const BOT_TOKEN = context.env.BOT_TOKEN;
-    const CANAL_ID = context.env.CANAL_ID || "-1004377732507";
-    if (!BOT_TOKEN || !CANAL_ID) return new Response(JSON.stringify({ok:false}),{status:200});
-    const msg = `${tipo==='BUENO'?'👍🏻':'👎🏻'} VOTO ${tipo}\n👑 ${modelo?.perfil} (@${modelo?.username})\n📊 Total: ${total}\n👤 ${username} ID:${tg_id}`;
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CANAL_ID,text:msg})});
-    return new Response(JSON.stringify({ok:true}),{status:200});
-  } catch(e){ return new Response(JSON.stringify({ok:false}),{status:200}); }
-}
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+const clean=(v,max=300)=>String(v??"").trim().slice(0,max);
+export async function onRequestPost(context){
+ try{ const body=await context.request.json(); const tipo=clean(body.tipo,10); const modelo=body.modelo||{}; const perfil=clean(modelo.perfil,120); const username=clean(modelo.username,80).replace(/^@/,""); const tg_id=clean(body.tg_id,64); const actor=clean(body.username,100); const total=Number(body.total); if(!["BUENO","MALO"].includes(tipo)||!perfil||!tg_id||!Number.isFinite(total)||total<1)return json({ok:false,error:"Datos de voto inválidos"},400); const token=context.env.BOT_TOKEN,canal=context.env.CANAL_ID||"-1004377732507"; if(!token)return json({ok:false,error:"BOT_TOKEN no configurado"},500); const msg=(tipo==="BUENO"?"👍🏻":"👎🏻")+" VOTO "+tipo+"\n👑 "+perfil+" (@"+username+")\n📊 Total: "+Math.floor(total)+"\n👤 "+(actor||"Anon")+" ID:"+tg_id; const tg=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:canal,text:msg})}); if(!tg.ok)return json({ok:false,error:"Telegram rechazó la notificación"},502); return json({ok:true}); } catch(e){return json({ok:false,error:"Solicitud inválida"},400);} }
