@@ -254,11 +254,12 @@ window.votar=async(tipo)=>{
       if(!snap.exists()) throw new Error('Modelo no encontrada');
       if(previous.exists()) return {registered:false,bueno:Number(snap.data().votosBueno||0),malo:Number(snap.data().votosMalo||0)};
       const data=snap.data();
+      if(data.votosBloqueados===true) throw new Error('Los votos están temporalmente bloqueados. Intenta de nuevo.');
       const bueno=Number(data.votosBueno||0)+(tipo==='BUENO'?1:0);
       const malo=Number(data.votosMalo||0)+(tipo==='MALO'?1:0);
       tx.update(ref,{votosBueno:bueno,votosMalo:malo,actualizado:new Date().toISOString()});
       tx.set(voteRef,{type:tipo==='BUENO'?'bueno':'malo',creado:new Date().toISOString()});
-      return {registered:true,bueno,malo};
+      return {registered:true,bueno,malo,total:bueno+malo};
     });
     if(!result.registered){
       alert('😩 Ya votaste por esta modelo');
@@ -270,8 +271,21 @@ window.votar=async(tipo)=>{
     let tg_id=window.Telegram?.WebApp?.initDataUnsafe?.user?.id || voterId;
     let username=window.Telegram?.WebApp?.initDataUnsafe?.user?.username ? '@'+window.Telegram.WebApp.initDataUnsafe.user.username : 'ID:'+tg_id;
     let m=modelosDB.find(x=>x.id===id)||modeloActual;
-    const total=result.bueno+result.malo;
-    fetch('/api/voto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo,modelo:{perfil:m.perfil,username:m.username,id:m.id},username,tg_id,total})}).catch(()=>{});
+    const total=result.total ?? (result.bueno+result.malo);
+    // La WebApp y el bot comparten el mismo documento de voto:
+    // modelos/{id}/votos/{telegram_user_id}. La notificación se conserva
+    // únicamente después de que la transacción haya confirmado el voto.
+    fetch('/api/voto',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        tipo,
+        modelo:{perfil:m.perfil,username:m.username,id:m.id},
+        username,
+        tg_id,
+        total
+      })
+    }).catch(()=>{});
   }catch(e){ alert('Error: '+e.message); }
 }
 window.compartir=()=>{
