@@ -1,11 +1,4 @@
-export async function onRequestPost(context) {
-  try {
-    const { perfil, username } = await context.request.json();
-    const BOT_TOKEN = context.env.BOT_TOKEN;
-    const CANAL_ID = context.env.CANAL_ID;
-    if (!BOT_TOKEN ||!CANAL_ID) return new Response(JSON.stringify({ok:false}),{status:200});
-    const msg = `🆕 NUEVA MODELO ${perfil}\n👑 @${username}\n🔗 https://galeria-verifiedmodels.pages.dev`;
-    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:CANAL_ID,text:msg})});
-    return new Response(JSON.stringify({ok:true}),{status:200});
-  } catch(e){ return new Response(JSON.stringify({ok:false}),{status:200}); }
-}
+const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{"Content-Type":"application/json","Cache-Control":"no-store"}});
+const clean=(v,max=200)=>String(v??"").trim().slice(0,max);
+export async function onRequestPost(context){
+ try{ const body=await context.request.json(); const perfil=clean(body.perfil),username=clean(body.username,80).replace(/^@/,""); const token=context.env.BOT_TOKEN,canal=context.env.CANAL_ID||"-1004377732507"; if(!perfil)return json({ok:false,error:"Perfil requerido"},400); if(!token)return json({ok:false,error:"BOT_TOKEN no configurado"},500); const msg="🆕 NUEVA MODELO "+perfil+"\n👑 @"+(username||"sin_username")+"\n🔗 https://galeria-verifiedmodels.pages.dev"; const tg=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:canal,text:msg})}); if(!tg.ok)return json({ok:false,error:"Telegram rechazó la notificación"},502); return json({ok:true}); } catch(e){return json({ok:false,error:"Solicitud inválida"},400);} }
