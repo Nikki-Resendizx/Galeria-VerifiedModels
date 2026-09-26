@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Panel Jefa V3.3 - Avisos Fix</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
 import { getFirestore, collection, addDoc, doc, updateDoc, deleteDoc, onSnapshot, serverTimestamp, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
@@ -55,8 +56,8 @@ label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:lef
 <p style="color:silver;font-size:11px">Avisos a canal -1004377732507 activo</p>
 <div id="login">
 <div style="font-size:28px;margin-bottom:8px">🔐</div>
-<p style="color:#ffb6da;font-size:12px;margin:0 0 12px">ACCESO RESTRINGIDO</p>
-<input id="pass" type="password" placeholder="Contraseña" autocomplete="current-password">
+<p style="color:#ffb6da;font-size:12px;margin:0 0 12px">ACCESO RESTRINGIDO • SOLO ADMINISTRADORES DE TELEGRAM</p>
+<input id="pass" type="text" readonly value="Abre este panel desde Telegram" style="text-align:center;color:#aaa">
 <button class="btn btn-save" onclick="check()">🔐 𝙀𝙉𝙏𝙍𝘼𝙍 🔐</button>
 <div id="error">❌ Contraseña incorrecta</div>
 <a href="index.html" style="display:block;text-align:center;color:silver;margin-top:15px;font-size:11px;text-decoration:none">← Ver galería</a>
@@ -135,26 +136,31 @@ label{color:#ff8ec3;font-weight:bold;font-size:12px;display:block;text-align:lef
 <script>
 let editId = null;
 let modelosCache = [];
-function check(){
-  let p = document.getElementById('pass').value;
-  if(p === atob("Tmlra2kwMTEy")){
+async function check(){
+  try{
+    const tg=window.Telegram?.WebApp;
+    if(!tg?.initData){ throw new Error('Abre el panel desde Telegram.'); }
+    tg.ready();
+    const res=await fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});
+    const data=await res.json();
+    if(!res.ok||!data.ok) throw new Error(data.error||'Acceso denegado');
     sessionStorage.setItem('verified_admin','ok');
     document.getElementById('login').style.display='none';
     document.getElementById('panel').style.display='block';
     iniciarFirebase();
-  } else {
+  }catch(e){
+    document.getElementById('error').innerText='❌ '+e.message;
     document.getElementById('error').style.display='block';
-    document.getElementById('pass').value='';
-    setTimeout(()=>document.getElementById('error').style.display='none',2000);
+    setTimeout(()=>document.getElementById('error').style.display='none',3000);
   }
 }
 function logout(){ sessionStorage.removeItem('verified_admin'); location.reload(); }
-if(sessionStorage.getItem('verified_admin')==='ok'){
-  document.getElementById('login').style.display='none';
-  document.getElementById('panel').style.display='block';
-  setTimeout(iniciarFirebase,500);
+async function validarSesion(){
+  if(!window.Telegram?.WebApp?.initData) return;
+  await check();
 }
-document.getElementById('pass').addEventListener('keypress',e=>{if(e.key==='Enter')check()});
+setTimeout(validarSesion,100);
+document.getElementById('pass')?.addEventListener('keypress',e=>{if(e.key==='Enter')check()});
 function cargarDeGaleria(input, idInput, idPrev){
   let file = input.files[0]; if(!file) return;
   let reader = new FileReader();
