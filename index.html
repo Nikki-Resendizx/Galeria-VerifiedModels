@@ -192,7 +192,7 @@ window.filtrar=()=>{
   if(filtroServicio) lista=lista.filter(m=> (m.servicios||[]).includes(filtroServicio));
   if(orden==='fav') lista=lista.filter(m=> favs.includes(m.id));
   if(orden==='top') lista.sort((a,b)=> ((b.votosBueno||0)/((b.votosBueno||0)+(b.votosMalo||0)||1)) - ((a.votosBueno||0)/((a.votosBueno||0)+(a.votosMalo||0)||1)));
-  if(orden==='nuevo') lista.sort((a,b)=> (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+  if(orden==='nuevo') lista.sort((a,b)=> (b.createdAt?.seconds||b.fecha?.seconds||0) - (a.createdAt?.seconds||a.fecha?.seconds||0));
   render(lista);
 }
 let comentariosUnsub=null;
@@ -230,7 +230,7 @@ function goSlide(n){
   currentSlide=n; track.style.transform=`translateX(-${n*100}%)`;
   document.querySelectorAll('.dot').forEach((d,i)=> d.classList.toggle('active', i===n));
 }
-window.cerrar=()=>{ document.getElementById('modal').style.display='none'; document.body.style.overflow='auto'; history.pushState(null,'',' '); if(comentariosUnsub) comentariosUnsub(); }
+window.cerrar=()=>{ document.getElementById('modal').style.display='none'; document.body.style.overflow='auto'; history.replaceState(null,'',location.pathname+location.hash); if(comentariosUnsub) comentariosUnsub(); }
 function actualizar(){
   if(!modeloActual) return; let m=modelosDB.find(x=>x.id===modeloActual.id)||modeloActual;
   modeloActual=m; let malo=m.votosMalo||0, bueno=m.votosBueno||0, total=malo+bueno;
@@ -324,6 +324,7 @@ window.borrarMiComent=async(comentId)=>{ if(!modeloActual) return; if(!confirm('
 window.enviarComent=async()=>{
   let txt=document.getElementById('inputComent').value.trim();
   if(!txt ||!modeloActual) return;
+  if(txt.length>500){ alert('El comentario no puede superar 500 caracteres.'); return; }
   let tg_id = (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('miAnonId') || '').toString();
   let tg_username = window.Telegram?.WebApp?.initDataUnsafe?.user?.username? '@'+window.Telegram?.WebApp?.initDataUnsafe?.user?.username : 'Anon_'+tg_id.slice(0,5);
   let m = modeloActual;
