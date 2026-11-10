@@ -199,12 +199,12 @@ function listar(){
   });
   document.getElementById('listaModelos').innerHTML=html;
 }
-async function avisarNuevaModelo(perfil, username, esEdicion){
+async function avisarNuevaModelo(perfil, username, id, esEdicion){
   try{
     await fetch('/api/nueva_modelo',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ perfil: perfil + (esEdicion? ' (EDITADA)' : ''), username })
+      body: JSON.stringify({ perfil: perfil + (esEdicion? ' (EDITADA)' : ''), username, id })
     });
   }catch(e){ console.log('Aviso no enviado', e); }
 }
@@ -232,11 +232,11 @@ window.guardar = async()=>{
   try{
     if(editId){
       await upd(docRef(db,"modelos",editId), m);
-      await avisarNuevaModelo(m.perfil, m.username, true);
+      await avisarNuevaModelo(m.perfil, m.username, editId, true);
       alert("✅ Cambios guardados! Aviso enviado a canal");
     } else {
-      await add(col(db,"modelos"), m);
-      await avisarNuevaModelo(m.perfil, m.username, false);
+      const creada = await add(col(db,"modelos"), m);
+      await avisarNuevaModelo(m.perfil, m.username, creada.id, false);
       alert("¡Publicada! 🩷 Aviso enviado a -1004377732507");
     }
     limpiar();
